@@ -15,8 +15,13 @@ import (
 	"github.com/synseqack/aict/internal/format"
 	"github.com/synseqack/aict/internal/meta"
 	pathutil "github.com/synseqack/aict/internal/path"
+	"github.com/synseqack/aict/internal/tool"
 	xmlout "github.com/synseqack/aict/internal/xml"
 )
+
+func init() {
+	tool.Register("stat", Run)
+}
 
 type Config struct {
 	FollowSymlinks bool

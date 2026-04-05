@@ -14,8 +14,13 @@ import (
 	"github.com/synseqack/aict/internal/detect"
 	"github.com/synseqack/aict/internal/meta"
 	pathutil "github.com/synseqack/aict/internal/path"
+	"github.com/synseqack/aict/internal/tool"
 	xmlout "github.com/synseqack/aict/internal/xml"
 )
+
+func init() {
+	tool.Register("cat", Run)
+}
 
 type Config struct {
 	LineNumbers bool

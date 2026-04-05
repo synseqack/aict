@@ -36,7 +36,7 @@ Or build from source:
 ```bash
 git clone https://github.com/synseqack/aict
 cd aict
-go build -o aict ./cmd/aict
+go build -o aict
 ```
 
 ## Usage

@@ -1,4 +1,7 @@
-# aict
+<h1>
+  <img src="./public/logo.svg" alt="aict logo" width="76" style="vertical-align: middle; margin-right: 12px;" />
+  aict
+</h1>
 
 CLI tools with XML/JSON output for AI agents. Built with AI tools to power AI tools.
 

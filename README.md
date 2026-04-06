@@ -1,5 +1,10 @@
 # aict
 
+[![CI](https://github.com/synseqack/aict/actions/workflows/ci.yml/badge.svg)](https://github.com/synseqack/aict/actions)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/synseqack/aict)](https://github.com/synseqack/aict)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Latest Release](https://img.shields.io/github/v/release/synseqack/aict)](https://github.com/synseqack/aict/releases)
+
 A CLI tool that outputs XML/JSON, built for AI agents to consume directly.
 
 ## Disclaimer
@@ -128,6 +133,22 @@ docker run --rm -v $(pwd):/data aict ls /data
 ## Why This Exists
 
 AI coding agents need to read files, search codebases, and compare directories. Standard CLI tools output human-readable text. This gives you the same capabilities, but the output is unambiguous.
+
+## FAQ
+
+**Why not just pipe to jq?**
+
+You can: `aict ls . --json | jq '.total_entries'`
+
+But jq doesn't help with `ls`, `cat`, `find`, or `stat` - those don't output JSON by default. aict gives you structured output natively for every tool.
+
+**Why XML instead of JSON by default?**
+
+XML is more readable for debugging and supports attributes alongside content. Both are supported: use `--json` if you prefer.
+
+**What about eza/ripgrep?**
+
+eza is a prettier `ls`. ripgrep is a faster `grep`. Both still output human-readable text. aict is designed for machine consumption first.
 
 ## Design Choices
 

@@ -199,6 +199,10 @@ func toBool(v interface{}) bool {
 	return false
 }
 
+func boolPointer(b bool) *bool {
+	return &b
+}
+
 func getString(args map[string]interface{}, key, defaultVal string) string {
 	if v, ok := args[key].(string); ok && v != "" {
 		return v
@@ -401,6 +405,10 @@ func main() {
 			Name:        name,
 			Description: meta.Description,
 			InputSchema: schemaMap,
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    true,
+				DestructiveHint: boolPointer(false),
+			},
 		}, toolHandler(name))
 	}
 

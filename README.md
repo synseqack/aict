@@ -159,6 +159,38 @@ eza is a prettier `ls`. ripgrep is a faster `grep`. Both still output human-read
 - Errors are structured data, never stderr
 - Paths are always absolute
 
+## Examples
+
+### Example 1: List directory with full metadata
+**User prompt:** "List the files in the src directory with their sizes and types"
+
+**What happens:**
+- Calls aict ls with path "src"
+- Returns XML with file name, size, language, MIME type, modified timestamp
+- Agent can extract specific fields without parsing
+
+### Example 2: Search code and find specific patterns
+**User prompt:** "Find all functions named 'handle' in the Go files"
+
+**What happens:**
+- Calls aict grep with pattern "func.*handle" and include "*.go"
+- Returns XML with file paths, line numbers, matched text
+- Each match includes column offset for precise navigation
+
+### Example 3: Get detailed file information
+**User prompt:** "What's in main.go? Show me its size and when it was last modified"
+
+**What happens:**
+- Calls aict stat with path "main.go"
+- Returns XML with permissions, size, owner, timestamps (Unix epoch)
+- Agent knows exactly when file was modified without parsing date strings
+
+## Privacy Policy
+
+aict is a read-only CLI tool. It does not collect, store, or transmit any user data. The tool only reads files and directories you explicitly specify and outputs structured data.
+
+For complete privacy information, see: https://github.com/synseqack/aict/blob/master/PRIVACY.md
+
 ## License
 
 MIT

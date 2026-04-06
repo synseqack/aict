@@ -1,14 +1,14 @@
 # aict
 
-Your command line, but built for AI.
+A CLI tool that outputs XML/JSON, built for AI agents to consume directly.
 
 ## Disclaimer
 
-This project was built entirely by AI tools, for AI tools. Every line of code, every test, and every decision was made by an AI agent working with another AI agent. There were no human engineers writing code. If something breaks, an AI will fix it.
+This project was built entirely by AI tools, for AI tools. Every line of code, every test, and every decision was made by an AI agent working with another AI agent. There were no human engineers writing code.
 
 ## The Problem
 
-AI agents run standard CLI tools to explore codebases, but the output is designed for humans. Parsing is brittle and error-prone.
+When an AI agent runs `ls`, `grep`, or `cat`, it gets human-readable plaintext. The agent must parse column positions, guess which field is the filename, and handle inconsistent formats. This parsing is brittle and breaks easily.
 
 ## What You Get
 

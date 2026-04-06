@@ -2,21 +2,24 @@
 
 Thank you for your interest in contributing to aict.
 
+aict is a CLI tool that outputs XML/JSON, built for AI agents to consume directly. The goal is to replace human-readable CLI output with structured data that AI agents can parse without guessing field positions or parsing formats.
+
 ## Project Structure
 
 ```
 aict/
-├── cmd/aict/main.go       # Entry point
-├── cmd/mcp/               # MCP server implementation
-├── internal/              # Shared packages
-│   ├── xml/               # Output encoding (XML/JSON/plain)
-│   ├── detect/            # Language & MIME detection
-│   ├── path/              # Path resolution
-│   ├── format/            # Size formatting
-│   └── meta/              # Timestamps
-└── tools/                 # Individual tool implementations
+├── main.go               # Entry point
+├── cmd/mcp/              # MCP server implementation
+├── internal/             # Shared packages
+│   ├── tool/             # Tool registry & schema generation
+│   ├── xml/              # Output encoding (XML/JSON/plain)
+│   ├── detect/           # Language & MIME detection
+│   ├── path/             # Path resolution
+│   ├── format/           # Size formatting
+│   └── meta/             # Timestamps
+└── tools/                # Individual tool implementations
     └── <toolname>/
-        └── <toolname>.go  # Tool implementation
+        └── <toolname>.go # Tool implementation
 ```
 
 ## Adding a New Tool

@@ -13,6 +13,13 @@ If you discover a security vulnerability, please open an issue with the `securit
 
 Do not report security vulnerabilities through public GitHub issues.
 
+## Note on AI-Generated Code
+
+This project was built entirely by AI tools. While we strive for secure code, AI-generated software may contain unexpected vulnerabilities. We recommend:
+- Audit the code before using in production
+- Report any issues you find so they can be addressed
+- Use proper sandboxing regardless
+
 ## Scope
 
 This project is a CLI tool that reads and processes files. It does not:

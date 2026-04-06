@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main, master]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main, master]
 
@@ -88,17 +90,35 @@ jobs:
         with:
           go-version: '1.25'
 
+      - name: Get tag
+        id: get_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
       - name: Build releases
         run: |
           mkdir -p releases
+          
+          # Build aict for all platforms
           for os in linux darwin windows; do
             for arch in amd64 arm64; do
               ext=""
               if [ "$os" = "windows" ]; then
                 ext=".exe"
               fi
-              GOOS=$os GOARCH=$arch go build -o aict-${os}-${arch}${ext} ./main.go
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-${os}-${arch}${ext} ./main.go
               cp aict-${os}-${arch}${ext} releases/
+            done
+          done
+          
+          # Build aict-mcp for all platforms
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              ext=""
+              if [ "$os" = "windows" ]; then
+                ext=".exe"
+              fi
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-mcp-${os}-${arch}${ext} ./cmd/mcp
+              cp aict-mcp-${os}-${arch}${ext} releases/
             done
           done
 
@@ -106,10 +126,61 @@ jobs:
         run: |
           cd releases
           sha256sum * > checksums.txt
+          cat checksums.txt
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: releases/*
+          name: ${{ steps.get_tag.outputs.TAG }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and upload latest artifacts on every push to main
+  artifacts:
+    needs: [test, test-linux]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build releases
+        run: |
+          mkdir -p releases
+          
+          # Build aict for all platforms
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              ext=""
+              if [ "$os" = "windows" ]; then
+                ext=".exe"
+              fi
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-${os}-${arch}${ext} ./main.go
+              cp aict-${os}-${arch}${ext} releases/
+            done
+          done
+          
+          # Build aict-mcp for all platforms
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              ext=""
+              if [ "$os" = "windows" ]; then
+                ext=".exe"
+              fi
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-mcp-${os}-${arch}${ext} ./cmd/mcp
+              cp aict-mcp-${os}-${arch}${ext} releases/
+            done
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: releases
+          path: releases/
+          retention-days: 30

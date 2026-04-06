@@ -11,8 +11,8 @@
 
 ### Tasks
 
-- [ ] Initialize Go module: `go mod init github.com/synseqack/aict`
-- [ ] Create directory structure per spec:
+- [x] Initialize Go module: `go mod init github.com/synseqack/aict`
+- [x] Create directory structure per spec:
   ```
   cmd/aict/main.go
   internal/xml/encoder.go
@@ -23,42 +23,42 @@
   internal/meta/timestamp.go
   tools/ls/ls.go
   ```
-- [ ] Implement `internal/xml/encoder.go`:
+- [x] Implement `internal/xml/encoder.go`:
   - Pretty vs compact XML output
   - `--xml`, `--json`, `--plain` mode switching
   - `AICT_XML=1` env var detection
   - Structured error element: `<error code="" msg=""/>`
-- [ ] Implement `internal/detect/language.go`:
+- [x] Implement `internal/detect/language.go`:
   - Extension → language map (~200 entries)
   - Shebang line detection
   - Canonical lowercase names
-- [ ] Implement `internal/detect/mime.go`:
+- [x] Implement `internal/detect/mime.go`:
   - `net/http.DetectContentType` wrapper
   - First 512 bytes sampling
-- [ ] Implement `internal/path/resolve.go`:
+- [x] Implement `internal/path/resolve.go`:
   - `filepath.Abs`, `filepath.EvalSymlinks`
   - Always return absolute paths
-- [ ] Implement `internal/format/size.go`:
+- [x] Implement `internal/format/size.go`:
   - Bytes → IEC human-readable (KiB, MiB, GiB)
-- [ ] Implement `internal/meta/timestamp.go`:
+- [x] Implement `internal/meta/timestamp.go`:
   - `time.Now().Unix()` + `ago_s` helper
-- [ ] Implement `cmd/aict/main.go`:
+- [x] Implement `cmd/aict/main.go`:
   - Subcommand dispatch (`ls`, `cat`, `grep`, etc.)
   - Global flag parsing (`--xml`, `--json`, `--pretty`, `--plain`)
   - Env var `AICT_XML` check
-- [ ] Implement `tools/ls/ls.go` (Tier 1, first tool):
+- [x] Implement `tools/ls/ls.go` (Tier 1, first tool):
   - `os.ReadDir` + `fs.FileInfo`
   - XML output per spec: `<ls>`, `<file>`, `<directory>`, `<symlink>`
   - Attributes: `path`, `absolute`, `size_bytes`, `size_human`, `modified`, `modified_ago_s`, `permissions`, `mode`, `owner`, `group`, `mime`, `language`, `binary`, `executable`, `symlink`
   - Flags: `-l`, `-a`, `-A`, `-h`, `-t`, `-r`, `-R`
   - Structured error handling
-- [ ] Write tests for `ls`:
+- [x] Write tests for `ls`:
   - Unit tests for XML output structure
   - Integration tests against real directories
   - Edge cases: empty dirs, symlinks, hidden files, binary files
-- [ ] `go test ./...` passes
-- [ ] `go vet ./...` clean
-- [ ] `go build -o aict ./cmd/aict` produces working binary
+- [x] `go test ./...` passes
+- [x] `go vet ./...` clean
+- [x] `go build -o aict ./cmd/aict` produces working binary
 
 ### Acceptance Criteria
 
@@ -88,18 +88,18 @@ AICT_XML=1 ./aict ls src/
 
 ### 1.1 `cat` — File Read
 
-- [ ] `tools/cat/cat.go`:
+- [x] `tools/cat/cat.go`:
   - Read single and multiple files
   - CDATA-wrapped content
   - Attributes: `path`, `absolute`, `size_bytes`, `lines`, `encoding`, `language`, `binary`, `mime`, `modified`
   - Flags: `-n` (line numbers), multi-file concat
   - Binary file guard: omit content, suggest `--base64`
   - Encoding detection: UTF-8, UTF-8-BOM, binary
-- [ ] Tests: text files, binary files, multi-file, missing files, large files, encoding edge cases
+- [x] Tests: text files, binary files, multi-file, missing files, large files, encoding edge cases
 
 ### 1.2 `grep` — Content Search
 
-- [ ] `tools/grep/grep.go`:
+- [x] `tools/grep/grep.go`:
   - `regexp` package for pattern matching
   - Recursive directory walk with `io/fs`
   - Attributes: `pattern`, `flags`, `recursive`, `case_sensitive`, `match_type`, `searched_files`, `matched_files`, `total_matches`, `search_root`
@@ -107,47 +107,47 @@ AICT_XML=1 ./aict ls src/
   - Flags: `-r`, `-n`, `-l`, `-i`, `-w`, `-A`, `-B`, `-C`, `-c`, `-v`, `-E`, `-F`
   - `--include`, `--exclude-dir` filters
   - Empty result: `<grep matched_files="0" total_matches="0"/>`
-- [ ] Tests: regex patterns, literal strings, context lines, case-insensitive, no matches, binary file skip, include/exclude filters
+- [x] Tests: regex patterns, literal strings, context lines, case-insensitive, no matches, binary file skip, include/exclude filters
 
 ### 1.3 `find` — Filesystem Search
 
-- [ ] `tools/find/find.go`:
+- [x] `tools/find/find.go`:
   - `filepath.WalkDir` with predicates
   - Conditions: `-name` (glob), `-type`, `-mtime`, `-size`, `-maxdepth`, `-not`, `-o` (OR)
   - Attributes per result: `path`, `absolute`, `type`, `size_bytes`, `modified`, `language`, `mime`, `depth`
   - `<condition>` elements echo search criteria
-- [ ] Tests: name globbing, type filtering, depth limiting, mtime, size, exclude patterns, multiple roots, OR conditions
+- [x] Tests: name globbing, type filtering, depth limiting, mtime, size, exclude patterns, multiple roots, OR conditions
 
 ### 1.4 `stat` — File Metadata
 
-- [ ] `tools/stat/stat.go`:
+- [x] `tools/stat/stat.go`:
   - `os.Lstat` + `syscall.Stat_t`
   - All fields: `inode`, `links`, `device`, `permissions`, `mode_octal`, `uid`, `gid`, `owner`, `group`, `atime`, `mtime`, `ctime`, `birth`
   - Companion `_ago_s` attributes
   - Symlink handling: `-L` flag to follow
   - MIME + language enrichment
-- [ ] Tests: regular files, directories, symlinks, missing files, permission edge cases
+- [x] Tests: regular files, directories, symlinks, missing files, permission edge cases
 
 ### 1.5 `wc` — Count
 
-- [ ] `tools/wc/wc.go`:
+- [x] `tools/wc/wc.go`:
   - Line, word, char, byte counting
   - `bufio.Scanner` for efficient reading
   - Per-file and total counts
   - Flags: `-l`, `-w`, `-c`, `-m`
   - Language attribute per file
-- [ ] Tests: empty files, single-line, multi-line, binary files, glob patterns, multi-file totals
+- [x] Tests: empty files, single-line, multi-line, binary files, glob patterns, multi-file totals
 
 ### 1.6 `diff` — Change View
 
-- [ ] `tools/diff/diff.go`:
+- [x] `tools/diff/diff.go`:
   - Implement Myers O(ND) diff algorithm from scratch (~150 lines)
   - Unified diff format output
   - XML elements: `<hunk>`, `<added>`, `<removed>`, `<context>`
   - Attributes: `old_start`, `old_count`, `new_start`, `new_count`, line numbers on each element
   - Summary: `added_lines`, `removed_lines`, `changed_hunks`, `identical`
   - Flags: `-u`, `--label`, `-r` (recursive), `--ignore-all-space`, `-q`
-- [ ] Tests: identical files, single change, multiple hunks, whitespace-only changes, recursive directory diff, empty files
+- [x] Tests: identical files, single change, multiple hunks, whitespace-only changes, recursive directory diff, empty files
 
 ### Phase 1 Acceptance Criteria
 
@@ -171,107 +171,107 @@ done
 
 ### 2.1 `file` — Type Detection
 
-- [ ] `tools/file/file.go`:
+- [x] `tools/file/file.go`:
   - Magic bytes + extension lookup
   - Attributes: `type`, `mime`, `category`, `language`, `charset`, `executable`
   - Flags: `-b` (brief), `-i` (MIME output)
-- [ ] Tests: ELF binaries, text files, images, archives, scripts with shebangs
+- [x] Tests: ELF binaries, text files, images, archives, scripts with shebangs
 
 ### 2.2 `head` / `tail` — Partial Read
 
-- [ ] `tools/head/head.go`, `tools/tail/tail.go`:
+- [x] `tools/head/head.go`, `tools/tail/tail.go`:
   - First/last N lines or bytes
   - Attributes: `lines_requested`, `lines_returned`, `file_total_lines`, `bytes_returned`, `file_total_bytes`, `truncated`
   - Language + MIME enrichment
   - Flags: `-n`, `-c`
-- [ ] Tests: file smaller than request, exact match, byte mode, empty files
+- [x] Tests: file smaller than request, exact match, byte mode, empty files
 
 ### 2.3 `du` / `df` — Disk Usage
 
-- [ ] `tools/du/du.go`:
+- [x] `tools/du/du.go`:
   - `filepath.WalkDir` size accumulation
   - Attributes: `size_bytes`, `size_human`, `depth`
   - Flags: `-s`, `-h`, `-a`, `--max-depth`
-- [ ] `tools/df/df.go`:
+- [x] `tools/df/df.go`:
   - `syscall.Statfs` for filesystem stats
   - Attributes: `device`, `mount`, `type`, `size_bytes`, `used_bytes`, `avail_bytes`, `use_pct`, inodes
   - Flags: `-h`
-- [ ] Tests: directory trees, single files, multiple filesystems
+- [x] Tests: directory trees, single files, multiple filesystems
 
 ### 2.4 `realpath` / `basename` / `dirname`
 
-- [ ] `tools/realpath/realpath.go`, `tools/basename/basename.go`, `tools/dirname/dirname.go`:
+- [x] `tools/realpath/realpath.go`, `tools/basename/basename.go`, `tools/dirname/dirname.go`:
   - `filepath.Abs`, `filepath.EvalSymlinks`, `filepath.Base`, `filepath.Dir`, `filepath.Ext`
   - `basename`: add `stem` and `extension` attributes
   - `realpath`: add `exists`, `type` attributes
-- [ ] Tests: relative paths, symlinks, non-existent paths, nested paths
+- [x] Tests: relative paths, symlinks, non-existent paths, nested paths
 
 ### 2.5 `pwd`
 
-- [ ] `tools/pwd/pwd.go`:
+- [x] `tools/pwd/pwd.go`:
   - `os.Getwd` + home directory relative path
   - Attributes: `path`, `home`, `relative_to_home`
-- [ ] Tests: various working directories
+- [x] Tests: various working directories
 
 ### 2.6 `sort` / `uniq`
 
-- [ ] `tools/sort/sort.go`:
+- [x] `tools/sort/sort.go`:
   - Line sorting with key/field support
   - Attributes: `lines_in`, `lines_out`, `key`, `order`
   - Flags: `-n`, `-r`, `-k`, `-t`
-- [ ] `tools/uniq/uniq.go`:
+- [x] `tools/uniq/uniq.go`:
   - Deduplication with counting
   - Attributes: `lines_in`, `lines_out`, `duplicates_removed`, `counted`
   - Flags: `-c`, `-d`, `-u`
-- [ ] Tests: numeric sort, reverse sort, duplicate detection, counted output
+- [x] Tests: numeric sort, reverse sort, duplicate detection, counted output
 
 ### 2.7 `cut` / `tr`
 
-- [ ] `tools/cut/cut.go`:
+- [x] `tools/cut/cut.go`:
   - Field extraction by delimiter
   - Attributes: `delimiter`, `fields`, `lines_processed`
   - Flags: `-d`, `-f`
-- [ ] `tools/tr/tr.go`:
+- [x] `tools/tr/tr.go`:
   - Character transliteration/deletion
   - Flags: `-d`, `-s`
-- [ ] Tests: multi-field extraction, character mapping, deletion sets
+- [x] Tests: multi-field extraction, character mapping, deletion sets
 
 ### 2.8 `env` — Environment Snapshot
 
-- [ ] `tools/env/env.go`:
+- [x] `tools/env/env.go`:
   - `os.Environ()` with parsing
   - PATH parsed as `<path_entry>` list with existence checks
   - Secret detection heuristic (KEY, SECRET, TOKEN, PASSWORD, DSN, URL with auth)
   - Redaction: `present="true" redacted="true"` for secrets
   - Type classification: `path`, `path_list`, `secret`, `numeric`, `boolean`, `string`
-- [ ] Tests: secret redaction, PATH parsing, empty env, special characters in values
+- [x] Tests: secret redaction, PATH parsing, empty env, special characters in values
 
 ### 2.9 `id` / `whoami` / `uname` → Combined as `system`
 
-- [ ] `tools/system/system.go`:
+- [x] `tools/system/system.go`:
   - `os/user.Current()`, group lookup
   - `syscall.Uname` (Linux), `runtime.GOOS/GOARCH`
   - Combined output: `<system><user>...</user><os>...</os><runtime>...</runtime></system>`
   - Distribution detection from `/etc/os-release` (Linux)
-- [ ] Tests: user info, group membership, OS detection, runtime info
+- [x] Tests: user info, group membership, OS detection, runtime info
 
 ### 2.10 `ps` — Process List
 
-- [ ] `tools/ps/ps.go`:
+- [x] `tools/ps/ps.go`:
   - Linux: read `/proc/[pid]/stat`, `/proc/[pid]/status`, `/proc/[pid]/cmdline`
   - Darwin: `syscall.SysctlRaw` fallback
   - Attributes: `pid`, `ppid`, `user`, `uid`, `cpu_pct`, `mem_pct`, `vsz_kb`, `rss_kb`, `state`, `state_desc`, `started`, `command`, `args`, `exe`
   - Flags: `aux`, `-ef`, `-p`, `--sort`
-- [ ] Tests: process listing, specific PID, state decoding, command parsing
+- [x] Tests: process listing, specific PID, state decoding, command parsing
 
 ### 2.11 `md5sum` / `sha256sum` → Combined as `checksums`
 
-- [ ] `tools/checksums/checksums.go`:
+- [x] `tools/checksums/checksums.go`:
   - `crypto/md5`, `crypto/sha256`, `crypto/sha1`
   - `io.MultiWriter` for parallel hashing
   - Attributes: `md5`, `sha256`, `sha1`, `size_bytes`
   - Flags: `-c` (verify against checksum file)
-- [ ] Tests: single file, multi-file, verification mode, empty files, binary files
+- [x] Tests: single file, multi-file, verification mode, empty files, binary files
 
 ### Phase 2 Acceptance Criteria
 
@@ -282,6 +282,14 @@ done
 # Checksums match known values
 # Disk usage numbers are reasonable
 ```
+
+### MCP Server (Bonus)
+
+- [x] `cmd/mcp/server.go`:
+  - MCP protocol implementation
+  - Exposes all tools as callable MCP functions
+  - JSON output for tool results
+- [x] Tests: MCP protocol handling, tool invocation
 
 ---
 
@@ -350,12 +358,12 @@ done
 
 ## Phase 4 — Future Enhancements (Post-MVP)
 
-- [ ] `--json` output mode for all tools (mirror XML structure)
+- [x] `--json` output mode for all tools (mirror XML structure)
 - [ ] `rg` (ripgrep) integration: spawn `rg --json` if available, parse and re-emit as XML
 - [ ] `git` subcommands: `git status`, `git diff`, `git log`, `git ls-files`, `git blame` with XML output
 - [ ] Tree-sitter integration for `grep` function-name enrichment (optional, cgo)
 - [ ] `--stream` mode: emit XML elements as they're discovered (SAX-like, for huge directories)
-- [ ] MCP server wrapper: expose all tools as MCP tools for direct AI agent consumption
+- [x] MCP server wrapper: expose all tools as MCP tools for direct AI agent consumption
 - [ ] `aict doctor`: self-diagnostic command that checks PATH, permissions, platform support
 
 ---

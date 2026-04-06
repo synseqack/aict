@@ -141,6 +141,10 @@ func parseFlags(args []string) (Config, []string) {
 }
 
 func calculateDu(path string, cfg Config) ([]DuEntry, int64, error) {
+	if cfg.MaxDepth == 0 {
+		cfg.MaxDepth = -1
+	}
+
 	resolved, err := pathutil.Resolve(path)
 	if err != nil {
 		return nil, 0, err

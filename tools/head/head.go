@@ -221,6 +221,9 @@ func headFile(path string, cfg Config) (*HeadResult, error) {
 		result.LinesRequested = 0
 		result.BytesRequested = cfg.Bytes
 	} else {
+		if !cfg.LinesFlag {
+			cfg.Lines = 10
+		}
 		result.LinesRequested = cfg.Lines
 		result.BytesRequested = 0
 	}
@@ -284,7 +287,7 @@ func readLines(path string, n int) ([]string, bool, error) {
 		return lines, truncated, scanner.Err()
 	}
 
-	if scanner.Scan() {
+	if len(lines) == n && scanner.Scan() {
 		truncated = true
 	}
 

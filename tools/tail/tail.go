@@ -225,6 +225,9 @@ func tailFile(path string, cfg Config) (*TailResult, error) {
 		result.LinesRequested = 0
 		result.BytesRequested = cfg.Bytes
 	} else {
+		if !cfg.LinesFlag {
+			cfg.Lines = 10
+		}
 		result.LinesRequested = cfg.Lines
 		result.BytesRequested = 0
 	}

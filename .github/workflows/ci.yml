@@ -121,6 +121,27 @@ jobs:
             done
           done
 
+      - name: Create platform tarballs
+        run: |
+          TAG=${{ steps.get_tag.outputs.TAG }}
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              ext=""
+              if [ "$os" = "windows" ]; then
+                ext=".exe"
+              fi
+              staging="aict-${TAG}-${os}-${arch}"
+              mkdir -p "$staging/completions"
+              cp "aict-${os}-${arch}${ext}" "$staging/aict${ext}"
+              cp "aict-mcp-${os}-${arch}${ext}" "$staging/aict-mcp${ext}"
+              cp completions/aict.bash "$staging/completions/"
+              cp completions/aict.zsh "$staging/completions/"
+              cp LICENSE "$staging/"
+              tar czf "releases/aict-${TAG}-${os}-${arch}.tar.gz" "$staging"
+              rm -rf "$staging"
+            done
+          done
+
       - name: Create checksums
         run: |
           cd releases
@@ -183,3 +204,20 @@ jobs:
           name: releases
           path: releases/
           retention-days: 30
+
+  # Update Homebrew tap formula on new releases
+  update-brew:
+    needs: [release]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: aict
+          homebrew-tap: synseqack/homebrew-aict
+          download-url: https://github.com/synseqack/aict/releases/download/${{ github.ref_name }}/aict-${{ github.ref_name }}-darwin-arm64.tar.gz
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

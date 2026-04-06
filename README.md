@@ -31,12 +31,24 @@ Every field is labeled. Paths are absolute. Timestamps are Unix integers. Langua
 
 ## Install
 
+### Homebrew (macOS)
+
+```bash
+brew tap synseqack/aict
+brew install aict
+```
+
+This installs both `aict` and `aict-mcp` binaries, plus shell completions for bash and zsh.
+
+### Go Install
+
 ```
 go install github.com/synseqack/aict@latest
 go install github.com/synseqack/aict/cmd/mcp@latest
 ```
 
-Or build from source:
+### Build from Source
+
 ```
 git clone https://github.com/synseqack/aict
 cd aict

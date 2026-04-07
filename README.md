@@ -50,18 +50,25 @@ Every field is labeled. Paths are always absolute. Timestamps are Unix integers.
 
 ## Install
 
-**Go install (recommended):**
+### Homebrew (macOS)
 
-```sh
+```bash
+brew tap synseqack/aict
+brew install aict
+```
+
+This installs both `aict` and `aict-mcp` binaries, plus shell completions for bash and zsh.
+
+### Go Install
+
+```
 go install github.com/synseqack/aict@latest
 go install github.com/synseqack/aict/cmd/mcp@latest
 ```
 
-**Pre-built binaries** — download from [Releases](https://github.com/synseqack/aict/releases) for Linux, macOS (Intel + Apple Silicon), and Windows.
+### Build from Source
 
-**Build from source:**
-
-```sh
+```
 git clone https://github.com/synseqack/aict
 cd aict
 go build -o aict .

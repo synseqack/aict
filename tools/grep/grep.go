@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,7 @@ type Config struct {
 	Include          string `flag:"" desc:"Include files matching pattern (e.g., *.go)"`
 	ExcludeDir       string `flag:"" desc:"Exclude directories matching pattern"`
 	MaxCount         int    `flag:"" desc:"Stop after N matches"`
+	Workers          string `flag:"" desc:"Number of parallel workers (integer or 'auto')"`
 	XML              bool
 	JSON             bool
 	Plain            bool
@@ -206,6 +208,11 @@ func parseFlags(args []string) (Config, string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--workers":
+			if i+1 < len(args) {
+				cfg.Workers = args[i+1]
+				i++
+			}
 		default:
 			if !strings.HasPrefix(arg, "-") && cfg.Pattern == "" {
 				cfg.Pattern = arg
@@ -309,6 +316,14 @@ func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 
 	var wg sync.WaitGroup
 	workerCount := 4
+	if cfg.Workers == "auto" {
+		workerCount = runtime.NumCPU()
+	} else if cfg.Workers == "" {
+		n, err := strconv.Atoi(cfg.Workers)
+		if err == nil && n > 0 {
+			workerCount = n
+		}
+	}
 
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)

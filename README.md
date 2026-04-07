@@ -1,78 +1,141 @@
-<h1>
-  <img src="./public/logo.svg" alt="aict logo" width="76" style="vertical-align: middle; margin-right: 12px;" />
-  aict
-</h1>
+<div align="center">
 
-CLI tools with XML/JSON output for AI agents. Built with AI tools to power AI tools.
+<img src="./public/logo.svg" width="380px" alt="aict" />
 
-[![Go](https://img.shields.io/badge/Go-1.25-blue)](https://go.dev)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/synseqack/aict/actions/workflows/ci.yml/badge.svg)](https://github.com/synseqack/aict/actions)
+**Unix coreutils with XML/JSON output — built for AI agents, not humans.**
+
+[![CI](https://img.shields.io/github/actions/workflow/status/synseqack/aict/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/synseqack/aict/actions)
+[![Go 1.25](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![Release](https://img.shields.io/github/v/release/synseqack/aict?style=flat-square)](https://github.com/synseqack/aict/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/synseqack/aict?style=flat-square)](https://goreportcard.com/report/github.com/synseqack/aict)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/synseqack/aict?style=flat-square)](https://github.com/synseqack/aict/stargazers)
+
+[Install](#install) · [Quick start](#quick-start) · [All tools](#tools) · [MCP server](#mcp-server) · [Claude Code](#claude-code-integration) · [Benchmarks](#benchmarks) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
 
 ## The problem
 
-When an AI runs `ls` it gets plaintext like:
-```
--rw-r--r-- 1 user staff 1024 Apr  6 10:00 main.go
-```
-The agent must guess which column is size, date, filename, and so on.
-
-## What you get
+AI agents run `ls`, `grep`, and `cat` and get back **human-readable plaintext**. Then they spend tokens parsing column positions, guessing field widths, and handling inconsistent formats. This is fragile and wasteful.
 
 ```
+-rw-r--r-- 1 user staff  2048 Apr  6 10:00 main.go        ← which column is size?
+-rw-r--r-- 1 user staff  1024 Apr  6 10:00 utils.go       ← what's the language?
+drwxr-xr-x 5 user staff   160 Apr  6 10:00 internal       ← is this a directory?
+```
+
+## The solution
+
+`aict` reimplements 22 Unix tools with **structured output** the agent can read directly — no parsing required.
+
+```xml
 $ aict ls src/
-<ls timestamp="1234567890" total_entries="2">
-  <file name="main.go" size_bytes="1024" language="go" mime="text/x-go"/>
-  <file name="utils.go" size_bytes="512" language="go" mime="text/x-go"/>
+<ls timestamp="1746123456" total_entries="3">
+  <file name="main.go" path="src/main.go" absolute="/project/src/main.go"
+        size_bytes="2048" size_human="2.0K" language="go" mime="text/x-go"
+        binary="false" executable="false" modified="1746120000" modified_ago_s="3456"/>
+  <file name="utils.go" path="src/utils.go" absolute="/project/src/utils.go"
+        size_bytes="1024" size_human="1.0K" language="go" mime="text/x-go"
+        binary="false" executable="false" modified="1746120000" modified_ago_s="3456"/>
+  <directory name="internal" path="src/internal" modified="1746120000"/>
 </ls>
 ```
 
-Every field is labeled. Paths are absolute. Timestamps are Unix integers. Language and MIME type are detected automatically.
+Every field is labeled. Paths are always absolute. Timestamps are Unix integers. Language and MIME type are detected automatically — zero parsing needed.
+
+---
 
 ## Install
 
-```
+**Go install (recommended):**
+
+```sh
 go install github.com/synseqack/aict@latest
 go install github.com/synseqack/aict/cmd/mcp@latest
 ```
 
-Or build from source:
-```
+**Pre-built binaries** — download from [Releases](https://github.com/synseqack/aict/releases) for Linux, macOS (Intel + Apple Silicon), and Windows.
+
+**Build from source:**
+
+```sh
 git clone https://github.com/synseqack/aict
 cd aict
 go build -o aict .
 go build -o aict-mcp ./cmd/mcp
 ```
 
-## Usage
+> **Verify install:** `aict --help` should list all available tools.
 
-```
-# XML (default)
+---
+
+## Quick start
+
+```sh
+# Default: XML output (best for AI agents)
 aict ls src/
 aict grep "func" . -r
+aict cat main.go
+aict diff old.go new.go
 
-# JSON
+# JSON output
 aict ls src/ --json
 
-# Plain text
+# Plain text (same as the original Unix tools)
 aict ls src/ --plain
+
+# Enable XML globally for all aict calls
+export AICT_XML=1
 ```
+
+---
 
 ## Tools
 
+22 tools across 5 categories. Every tool supports `--xml` (default), `--json`, and `--plain`.
+
 | Category | Tools |
 |----------|-------|
-| File inspection | cat, head, tail, file, stat, wc |
-| Search | ls, find, grep, diff |
-| Path | realpath, basename, dirname, pwd |
-| Text | sort, uniq, cut, tr |
-| System | env, system, ps, df, du, checksums |
+| **File inspection** | `cat` `head` `tail` `file` `stat` `wc` |
+| **Search & compare** | `ls` `find` `grep` `diff` |
+| **Path utilities** | `realpath` `basename` `dirname` `pwd` |
+| **Text processing** | `sort` `uniq` `cut` `tr` |
+| **System & environment** | `env` `system` `ps` `df` `du` `checksums` |
 
-## MCP Server
+Additional: `git` (status, diff, log, ls-files, blame) · `doctor` (self-diagnostic)
 
-Build: `go build -o aict-mcp ./cmd/mcp`
+---
 
-Add to Claude Desktop (`~/.config/claude/claude_desktop_config.json`):
+## Output format
+
+All tools follow the same conventions:
+
+| Field | Convention |
+|-------|-----------|
+| Paths | Always absolute (`absolute` attr) |
+| Timestamps | Unix epoch integers + `_ago_s` companion |
+| Sizes | Bytes (`size_bytes`) + human-readable (`size_human`) |
+| Booleans | `"true"` / `"false"` strings |
+| Errors | `<error code="" msg=""/>` elements — never stderr |
+| Empty results | Valid XML with zero counts, never an error |
+
+---
+
+## MCP server
+
+`aict-mcp` exposes all 22 tools as callable MCP functions. AI assistants call them natively — no shell wrapping needed.
+
+**Build:**
+
+```sh
+go build -o aict-mcp ./cmd/mcp
+```
+
+**Configure Claude Desktop** (`~/.config/claude/claude_desktop_config.json`):
+
 ```json
 {
   "mcpServers": {
@@ -84,22 +147,8 @@ Add to Claude Desktop (`~/.config/claude/claude_desktop_config.json`):
 }
 ```
 
-## Claude Code Integration
+If `aict` is not in PATH, set the binary location explicitly:
 
-For Claude Code, add to your `~/.claude.json`:
-
-```json
-{
-  "mcpServers": {
-    "aict": {
-      "command": "aict-mcp",
-      "args": []
-    }
-  }
-}
-```
-
-Or set the `AICT_BINARY` environment variable if the binary is not in PATH:
 ```json
 {
   "mcpServers": {
@@ -113,87 +162,79 @@ Or set the `AICT_BINARY` environment variable if the binary is not in PATH:
 }
 ```
 
-## Examples
+---
 
-### Example 1: List files in a directory
-**User prompt:** "Show me all files in the src directory"
+## Claude Code integration
 
-**Expected behavior:**
-- Run `aict ls src/`
-- Returns XML with file entries, each containing name, size, language, and MIME type
-- Example output:
-```xml
-<ls timestamp="..." total_entries="2">
-  <file name="main.go" size_bytes="1024" language="go" mime="text/x-go"/>
-  <file name="utils.go" size_bytes="512" language="go" mime="text/x-go"/>
-</ls>
+Add to `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "aict": {
+      "command": "aict-mcp",
+      "args": []
+    }
+  }
+}
 ```
 
-### Example 2: Search for a pattern
-**User prompt:** "Find all files containing the word 'func' in the project"
+Once connected, Claude Code can call `ls`, `grep`, `diff`, and all other tools as native functions with typed arguments and structured JSON results.
 
-**Expected behavior:**
-- Run `aict grep "func" . -r`
-- Returns XML with matching files, line numbers, and context
-- Each match includes the line content and byte offset
-
-### Example 3: Get file metadata
-**User prompt:** "Show me detailed info about main.go"
-
-**Expected behavior:**
-- Run `aict stat main.go`
-- Returns XML with permissions, timestamps, owner, size, language, and MIME type
-
-## Privacy Policy
-
-aict is read-only. It does not collect, store, or transmit any user data. For complete privacy information, see [PRIVACY.md](PRIVACY.md).
-
-### Data Collection
-- No data collection
-- No network requests (except local MIME type detection)
-- No telemetry or analytics
-- Only accesses paths explicitly provided
-
-## FAQ
-
-**Why not pipe to jq?**
-
-jq doesn't help with ls, cat, find, stat - they don't output JSON. aict gives structured output for every tool.
-
-**Why XML by default?**
-
-Denser encoding for AI context windows. `<file size="1024"/>` is 22 chars vs 30+ in JSON. Use `--json` if preferred.
-
-**How is this different from ripgrep?**
-
-ripgrep is excellent for searching. aict grep provides similar functionality but adds language detection, MIME type, and integrates with the same output format as other tools. For pure grep performance, use ripgrep with `--json` and parse the output.
-
-**How is this different from eza/lsd?**
-
-eza and lsd are modern ls replacements with better colors and formatting. aict outputs structured data instead of human-readable tables. Use eza for terminal use, aict for AI agent consumption.
-
-**Does it work on Windows?**
-
-Partially. ls, cat, stat, wc, find, diff, grep, head, tail work. ps and df are Linux/macOS only.
-
-**Can I contribute?**
-
-Yes. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Support
-
-For issues and questions: https://github.com/synseqack/aict/issues
+---
 
 ## Benchmarks
 
-| Tool | GNU | aict | Notes |
-|------|-----|------|-------|
-| ls (1000 files) | ~2ms | ~15ms | 7x overhead |
-| grep (100k lines) | ~1ms | ~100ms | language detection |
-| cat (100k lines) | ~1ms | ~23ms | 17x overhead |
+aict trades some speed for semantic richness (language detection, MIME typing, absolute paths). The overhead is intentional.
 
-Use `--plain` to skip enrichment when you only need content.
+| Tool | GNU | aict | Ratio | Notes |
+|------|-----|------|-------|-------|
+| `ls` (1000 files) | ~2ms | ~15ms | 7x | ✅ within target |
+| `find` (deep tree) | ~2ms | ~9ms | 5x | ✅ within target |
+| `diff` (1000 lines) | ~1ms | ~10ms | 10x | ✅ within target |
+| `grep` (100k lines) | ~1ms | ~100ms | 100x | language detection per file |
+| `cat` (100k lines) | ~1ms | ~23ms | 17x | encoding + MIME detection |
+
+Use `--plain` to skip enrichment when you only need raw content.
+
+---
+
+## FAQ
+
+**Why XML and not JSON by default?**
+
+XML attributes are denser in a context window. `<file size="1024" lang="go"/>` is shorter than `{"size":1024,"lang":"go"}`. Use `--json` if you prefer JSON — the structure is identical.
+
+**Why not pipe GNU tools to `jq`?**
+
+`ls`, `cat`, `stat`, `find`, `diff`, and `wc` don't output JSON. `jq` can't help with them. aict provides structured output for the entire toolchain, not just grep.
+
+**How does this compare to ripgrep?**
+
+ripgrep is much faster for pure search. aict grep adds language detection, MIME type, and a consistent output format shared with every other tool. Use ripgrep for speed-critical search; use aict when the agent needs structured context.
+
+**How does this compare to eza / lsd?**
+
+eza and lsd are better `ls` for humans — great colors and formatting. aict outputs data structures, not formatted tables. They're solving different problems.
+
+**Does it work on Windows?**
+
+`ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `checksums`, and path utilities work on Windows. `ps`, `df`, and `system` are Linux/macOS only.
+
+**Is this safe to run in a sandboxed environment?**
+
+Yes. aict is strictly read-only. No network requests (MIME detection uses the Go stdlib, not HTTP). No telemetry. No data collection. It only reads paths you explicitly pass to it.
+
+---
+
+## Contributing
+
+Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, code style, and the tool implementation pattern.
+
+Issues tagged [`good first issue`](https://github.com/synseqack/aict/issues?q=label%3A%22good+first+issue%22) are a good place to start.
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE) — built entirely by AI tools, for AI tools.

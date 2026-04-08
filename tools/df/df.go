@@ -106,7 +106,7 @@ func getFilesystems(cfg Config) (*DfResult, error) {
 		Timestamp: meta.Now(),
 	}
 
-	mounts, err := parseMounts()
+	mounts, err := getMounts()
 	if err != nil {
 		result.Errors = append(result.Errors, DfError{Code: 1, Msg: err.Error()})
 		return result, nil
@@ -127,31 +127,6 @@ type mountInfo struct {
 	Device     string
 	Mountpoint string
 	Fstype     string
-}
-
-func parseMounts() ([]mountInfo, error) {
-	data, err := os.ReadFile("/proc/mounts")
-	if err != nil {
-		return nil, err
-	}
-
-	var mounts []mountInfo
-	lines := string(data)
-
-	for _, line := range splitLines(lines) {
-		fields := splitFields(line)
-		if len(fields) < 3 {
-			continue
-		}
-
-		mounts = append(mounts, mountInfo{
-			Device:     fields[0],
-			Mountpoint: fields[1],
-			Fstype:     fields[2],
-		})
-	}
-
-	return mounts, nil
 }
 
 func splitLines(s string) []string {

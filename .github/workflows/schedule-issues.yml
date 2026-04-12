@@ -1,0 +1,144 @@
+name: Scheduled Issue Creator
+
+on:
+  schedule:
+    # Runs every day at 9:00 AM UTC
+    - cron: '0 9 * * *'
+  # Allow manual trigger with a specific day override
+  workflow_dispatch:
+    inputs:
+      force_day:
+        description: 'Force a specific day number (1-15). Leave empty for auto.'
+        required: false
+        default: ''
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute current day offset
+        id: day
+        run: |
+          # Set the start date — change this to your actual campaign start date (YYYY-MM-DD)
+          START_DATE="2026-04-13"
+
+          if [ -n "${{ github.event.inputs.force_day }}" ]; then
+            DAY_NUM="${{ github.event.inputs.force_day }}"
+            echo "Forced day: $DAY_NUM"
+          else
+            START_EPOCH=$(date -d "$START_DATE" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$START_DATE" +%s)
+            NOW_EPOCH=$(date +%s)
+            DIFF_DAYS=$(( (NOW_EPOCH - START_EPOCH) / 86400 ))
+            DAY_NUM=$(( DIFF_DAYS + 1 ))
+            echo "Computed day offset: $DAY_NUM"
+          fi
+
+          if [ "$DAY_NUM" -lt 1 ] || [ "$DAY_NUM" -gt 15 ]; then
+            echo "Day $DAY_NUM is outside the campaign range (1-15). Skipping."
+            echo "in_range=false" >> $GITHUB_OUTPUT
+          else
+            echo "day_num=$DAY_NUM" >> $GITHUB_OUTPUT
+            echo "in_range=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Read issue data for today
+        id: issue
+        if: steps.day.outputs.in_range == 'true'
+        run: |
+          DAY_NUM="${{ steps.day.outputs.day_num }}"
+          ISSUE_FILE=".github/scheduled-issues.json"
+
+          if [ ! -f "$ISSUE_FILE" ]; then
+            echo "Issue data file not found at $ISSUE_FILE"
+            exit 1
+          fi
+
+          # Extract issue for today's day number
+          TITLE=$(jq -r --argjson day "$DAY_NUM" '.[] | select(.day == $day) | .title' "$ISSUE_FILE")
+          BODY=$(jq -r --argjson day "$DAY_NUM" '.[] | select(.day == $day) | .body' "$ISSUE_FILE")
+          LABELS=$(jq -r --argjson day "$DAY_NUM" '.[] | select(.day == $day) | .labels | join(",")' "$ISSUE_FILE")
+
+          if [ -z "$TITLE" ]; then
+            echo "No issue found for day $DAY_NUM. Skipping."
+            echo "has_issue=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_issue=true" >> $GITHUB_OUTPUT
+
+          # Write body to a file to avoid shell quoting issues with multiline content
+          echo "$BODY" > /tmp/issue_body.md
+
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "labels=$LABELS" >> $GITHUB_OUTPUT
+          echo "Found issue for day $DAY_NUM: $TITLE"
+
+      - name: Check for duplicate issue
+        id: duplicate
+        if: steps.issue.outputs.has_issue == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="${{ steps.issue.outputs.title }}"
+
+          # Search for existing open issues with the same title
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --search "$TITLE" \
+            --json title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | length")
+
+          if [ "$EXISTING" -gt "0" ]; then
+            echo "Issue already exists: $TITLE — skipping."
+            echo "is_duplicate=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_duplicate=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub issue
+        if: steps.issue.outputs.has_issue == 'true' && steps.duplicate.outputs.is_duplicate == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="${{ steps.issue.outputs.title }}"
+          LABELS="${{ steps.issue.outputs.labels }}"
+
+          # Build label flags — gh issue create accepts multiple --label flags
+          LABEL_FLAGS=""
+          IFS=',' read -ra LABEL_ARRAY <<< "$LABELS"
+          for label in "${LABEL_ARRAY[@]}"; do
+            LABEL_FLAGS="$LABEL_FLAGS --label \"$label\""
+          done
+
+          echo "Creating issue: $TITLE"
+          echo "Labels: $LABELS"
+
+          eval gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file /tmp/issue_body.md \
+            $LABEL_FLAGS
+
+          echo "Issue created successfully."
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.day.outputs.in_range }}" != "true" ]; then
+            echo "### ⏭️ Skipped — outside campaign range (day 1–15)" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.issue.outputs.has_issue }}" != "true" ]; then
+            echo "### ⏭️ Skipped — no issue scheduled for today" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.duplicate.outputs.is_duplicate }}" == "true" ]; then
+            echo "### ⚠️ Skipped — issue already exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ Issue created: ${{ steps.issue.outputs.title }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Day:** ${{ steps.day.outputs.day_num }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Labels:** ${{ steps.issue.outputs.labels }}" >> $GITHUB_STEP_SUMMARY
+          fi

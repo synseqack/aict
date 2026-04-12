@@ -1,0 +1,92 @@
+[
+  {
+    "day": 1,
+    "title": "wc incorrectly reports max_line_len in bytes instead of Unicode code points",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/wc/wc.go`, `maxLineLen` is computed using `len(line)` which returns byte length, not rune/character count. For files containing multi-byte UTF-8 characters (Chinese, emoji, accented chars), the `max_line_len` attribute in XML output misrepresents actual character width.\n\n## Steps to Reproduce\n\n1. Create a file with multi-byte content: `echo '你好世界' > test.txt`\n2. Run `aict wc test.txt --xml`\n3. Observe `max_line_len` reports `12` (bytes) instead of `4` (runes)\n\n## Expected Behavior\n\n`max_line_len` should count Unicode code points using `utf8.RuneCountInString(line)`\n\n## Actual Behavior\n\n`max_line_len` counts raw bytes, inflating values for non-ASCII content\n\n## Related\n\n`tools/wc/wc.go` line ~100"
+  },
+  {
+    "day": 2,
+    "title": "grep parallel workers produce non-deterministic XML output ordering",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/grep/grep.go`, `searchDirectory` spawns worker goroutines that feed results into `resultChan`. Results are appended to `result.Matches` in channel receive order, which depends on goroutine scheduling. Two identical runs on the same directory can return files in a different order.\n\n## Steps to Reproduce\n\n1. Run `aict grep 'func' . -r --xml` twice on any Go project\n2. Compare the order of `<file>` elements — it may differ between runs\n\n## Expected Behavior\n\nOutput should be deterministic. Results should be sorted by `path` before serialization, consistent with GNU grep behavior.\n\n## Actual Behavior\n\nFile order in XML output is non-deterministic across runs.\n\n## Proposed Solution\n\nAfter collecting all results from `resultChan`, sort `result.Matches` by `Absolute` path before calling `outputResult`."
+  },
+  {
+    "day": 3,
+    "title": "Add --max-depth flag to grep for recursive search depth limiting",
+    "labels": ["enhancement"],
+    "body": "## Description\n\n`aict grep -r` currently walks the entire directory tree with no depth limit. On large monorepos this produces excessive output and is slow.\n\n## Proposed Solution\n\nAdd `--max-depth N` flag mirroring `find`'s `-maxdepth` behavior.\n\n**Usage:**\n```bash\naict grep \"func\" . -r --max-depth 2\n```\n\nThis would search only 2 levels deep from the search root.\n\n## XML Output Change\n\nAdd `max_depth` attribute to the root `<grep>` element:\n```xml\n<grep pattern=\"func\" recursive=\"true\" max_depth=\"2\" ...>\n```\n\n## Motivation\n\n- Consistency with `find` tool which already has `-maxdepth`\n- Faster targeted searches in large codebases\n- Reduces token count for AI agents that only need shallow results\n\n## Related\n\n- `tools/grep/grep.go` `searchDirectory` function\n- `tools/find/find.go` `MaxDepth` implementation (reference)"
+  },
+  {
+    "day": 4,
+    "title": "stat silently falls back to mtime for atime/ctime on unsupported platforms with no indication",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/stat/stat.go`, `getATimSec`, `getMTimSec`, `getCTimSec` use nested interface type assertions. When the platform's `syscall.Stat_t` doesn't expose the expected method signatures (macOS, Windows), all three functions return `0` silently, causing the code to fall back to `info.ModTime()`.\n\nThe result is that `atime`, `mtime`, and `ctime` in the XML output all show identical values with no signal to the consumer that this is a fallback.\n\n## Expected Behavior\n\nAdd a `platform_fallback=\"true\"` attribute on the `<stat>` element when syscall-level timestamps are unavailable, so consumers can handle the ambiguity correctly.\n\n## Actual Behavior\n\nAll three timestamps are identical and equal to `mtime`, no indication that the values are approximations.\n\n## Affected Platforms\n\n- macOS (partial — `Atimespec`/`Mtimespec` differ from Linux `Atim`/`Mtim`)\n- Windows (no syscall timestamp fields)\n\n## Related\n\n`tools/stat/stat.go` `getATimSec`, `getMTimSec`, `getCTimSec`"
+  },
+  {
+    "day": 5,
+    "title": "env tool leaks secret values in XML output despite redacted=\"true\" attribute",
+    "labels": ["bug"],
+    "body": "## Description\n\nCritical: In `tools/env/env.go`, when `isSecret()` returns true for a variable, the code correctly sets `Redacted: \"true\"` but **still assigns the full plaintext value** to the `Value` field. Since `Value string \\`xml:\"value,attr\"\\`` is marshaled into the XML output, the actual secret is exposed in the output.\n\n## Steps to Reproduce\n\n```bash\nexport API_KEY=supersecret123\naict env --xml | grep API_KEY\n```\n\n**Output (current — wrong):**\n```xml\n<var name=\"API_KEY\" value=\"supersecret123\" redacted=\"true\" .../>\n```\n\n## Expected Behavior\n\n```xml\n<var name=\"API_KEY\" value=\"[REDACTED]\" redacted=\"true\" .../>\n```\n\n## Fix\n\nIn `tools/env/env.go`, when appending to `result.Variables`, set `Value: \"[REDACTED]\"` (or empty string) when `isSecret` is true.\n\n## Severity\n\nHigh — this defeats the purpose of the secret detection feature entirely."
+  },
+  {
+    "day": 6,
+    "title": "Add aict touch tool for updating file timestamps with XML output",
+    "labels": ["enhancement"],
+    "body": "## Description\n\nAdd `aict touch` as a companion to `aict stat`. It would update file `atime`/`mtime` via `os.Chtimes` and output the resulting timestamps in structured XML.\n\n## Use Case\n\nAI agents processing files often need to mark files as \"visited\" or update timestamps as part of a workflow. Currently there's no structured way to do this via aict.\n\n## Proposed XML Output\n\n```xml\n<touch timestamp=\"1746123456\" files=\"1\">\n  <file path=\"main.go\" absolute=\"/project/main.go\"\n        atime=\"1746123456\" atime_ago_s=\"0\"\n        mtime=\"1746123456\" mtime_ago_s=\"0\"\n        created=\"false\"/>\n</touch>\n```\n\n## Flags\n\n| Flag | Description |\n|------|-------------|\n| `-t` | Specify timestamp (Unix epoch or date string) |\n| `-a` | Update atime only |\n| `-m` | Update mtime only |\n| `-c` | Do not create file if it does not exist |\n\n## Note\n\nThis is a write operation on metadata (not file content), which may warrant discussion on whether it fits the project's read-focused scope."
+  },
+  {
+    "day": 7,
+    "title": "ls plain text output columns misalign for long filenames or owner names",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/ls/ls.go`, `writePlain` uses hardcoded format widths (`%-10s`, `%8s`). For entries with long owner names, long filenames, or large file sizes, columns fall out of alignment.\n\n## Steps to Reproduce\n\n1. Create a directory with files owned by a user with a long username\n2. Run `aict ls . --plain`\n3. Observe misaligned columns\n\n## Expected Behavior\n\nColumn widths should be computed dynamically based on the longest value per column, matching GNU `ls -l` behavior.\n\n## Implementation Approach\n\n1. First pass: collect all entries and compute `maxOwnerLen`, `maxGroupLen`, `maxSizeLen`\n2. Second pass: format output using computed widths\n\n## Actual Behavior\n\nFixed-width columns cause visual misalignment when any value exceeds the hardcoded width.\n\n## Related\n\n`tools/ls/ls.go` `writePlain` function"
+  },
+  {
+    "day": 8,
+    "title": "diff hunk old_count and new_count attributes are always 0 in XML output",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/diff/diff.go`, the `DiffHunk` struct has `OldCount int` and `NewCount int` fields but they are **never assigned** during hunk construction. Only `OldStart` and `NewStart` are set.\n\n## Impact\n\nXML consumers that rely on `old_count`/`new_count` to reconstruct or display diffs receive incorrect zero values. The unified diff format requires these (`@@ -10,5 +10,7 @@`).\n\n## Steps to Reproduce\n\n```bash\naict diff file1.go file2.go --xml\n```\n\nObserve: `<hunk old_start=\"10\" old_count=\"0\" new_start=\"10\" new_count=\"0\">`\n\n## Expected Behavior\n\n`old_count` = number of `removed` + `context` lines in the hunk\n`new_count` = number of `added` + `context` lines in the hunk\n\n## Fix\n\nAfter building each hunk's `Lines` slice, compute counts before appending to `hunks`:\n```go\nhunk.OldCount = countLines(hunk.Lines, \"removed\") + countLines(hunk.Lines, \"context\")\nhunk.NewCount = countLines(hunk.Lines, \"added\") + countLines(hunk.Lines, \"context\")\n```\n\n## Related\n\n`tools/diff/diff.go` `computeDiff` function"
+  },
+  {
+    "day": 9,
+    "title": "Add aict each: batch tool for piping find/grep results into another tool",
+    "labels": ["enhancement"],
+    "body": "## Description\n\nAI agents frequently need to apply one tool to many paths — e.g., `stat` every file returned by `find`. Currently this requires spawning a separate process per file. Add `aict each <tool> [flags]` which reads newline-separated paths from stdin and runs the given tool on each, collecting all results under a single root element.\n\n## Usage\n\n```bash\n# stat every Go file in the project\naict find . -name \"*.go\" --plain | aict each stat\n\n# checksum every file found\naict find . -type f --plain | aict each checksums\n```\n\n## Proposed XML Output\n\n```xml\n<each tool=\"stat\" count=\"42\" timestamp=\"1746123456\">\n  <stat path=\"main.go\" ...> ... </stat>\n  <stat path=\"utils.go\" ...> ... </stat>\n</each>\n```\n\n## Implementation Notes\n\n- Read stdin line by line\n- For each path, call the registered tool function directly (not via exec)\n- Collect results into a wrapper element\n- Support `--workers N` for parallel execution\n- Empty stdin should produce valid XML with `count=\"0\"`\n\n## Related\n\n- `internal/tool/tool.go` registry\n- Phase 4 in ROADMAP.md"
+  },
+  {
+    "day": 10,
+    "title": "find -not flag incorrectly inverts all conditions instead of only the next predicate",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/find/find.go`, when `-not` is passed, `cfg.Invert = true` is set globally. Inside `evaluateConditions`, every condition check independently applies `if cfg.Invert { matched = !matched }`. This means `-not` inverts **all** predicates simultaneously.\n\nGNU `find` applies `-not` only to the immediately following predicate.\n\n## Steps to Reproduce\n\n```bash\n# Intended: find non-.go regular files\naict find . -not -name \"*.go\" -type f\n\n# Actual: also inverts -type f, so returns directories named *.go (nonsensical)\n```\n\n## Expected Behavior\n\n`-not -name \"*.go\" -type f` should return regular files whose name does not match `*.go`.\n\n## Proposed Fix\n\nChange `Invert` from a global bool to a per-condition flag. Parse predicates in order and associate the invert flag with the immediately following condition only.\n\n## Related\n\n`tools/find/find.go` `parseFlags` and `evaluateConditions`"
+  },
+  {
+    "day": 11,
+    "title": "Add AICT_COLOR=1 environment variable for ANSI color support in plain text mode",
+    "labels": ["enhancement"],
+    "body": "## Description\n\nWhen `--plain` is used interactively, output is plain monochrome text. Add opt-in ANSI color support via `AICT_COLOR=1` to make tools like `aict ls --plain` and `aict grep --plain` more usable at the terminal — without affecting XML/JSON output at all.\n\n## Color Conventions\n\n| Entry type | Color |\n|------------|-------|\n| Directories | Bold blue |\n| Executables | Bold green |\n| Symlinks | Bold cyan |\n| Binary files | Red |\n| grep matches | Yellow highlight |\n| Errors | Bold red |\n\n## Rules\n\n- Only activates when `AICT_COLOR=1` AND `--plain` is set\n- Never affects `--xml` or `--json` output\n- Colors are stripped when stdout is not a TTY (pipe-safe)\n- `AICT_COLOR=0` or `NO_COLOR=1` explicitly disables\n\n## Affected Tools\n\n`ls`, `grep`, `find`, `diff`, `stat` plain text modes\n\n## Related\n\n`internal/xml/encoder.go` — add `IsColorMode()` helper similar to `IsXMLMode()`"
+  },
+  {
+    "day": 12,
+    "title": "checksums: benchmark and document performance for files larger than 100MB",
+    "labels": ["performance"],
+    "body": "## Description\n\nIn `tools/checksums/checksums.go`, the file is read in 32KB chunks and all three hashers (`md5`, `sha1`, `sha256`) are updated per chunk. For large files (100MB+), the buffer size and I/O pattern haven't been benchmarked.\n\n## Tasks\n\n- [ ] Add `BenchmarkChecksums_100MB` test in `checksums_test.go`\n- [ ] Compare current 32KB buffer vs 256KB vs 1MB buffer sizes\n- [ ] Verify `io.MultiWriter` is used correctly so all three hashers receive the same bytes in a single read pass\n- [ ] Document results in `benchmarks/README.md`\n- [ ] Consider adding `--algorithm md5` single-hash fast path that skips unused hashers\n\n## Expected Outcome\n\nA clear performance baseline and optionally a tuned buffer size for large file hashing. Single-algorithm mode should be measurably faster than computing all three.\n\n## Related\n\n`tools/checksums/checksums.go`, `benchmarks/README.md`"
+  },
+  {
+    "day": 13,
+    "title": "cat CDATA output breaks for files containing the ]]> sequence",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `tools/cat/cat.go`, file content is placed inside a `<content>` element and serialized via `encoding/xml`. If a file contains the literal string `]]>` (which closes a CDATA section), the resulting XML is malformed and will fail to parse.\n\n## Steps to Reproduce\n\n```bash\necho 'some ]]> content' > test.xml\naict cat test.xml --xml | xmllint --noout -\n# → parser error\n```\n\n## Affected Files\n\nAny file containing `]]>`, including:\n- XML/HTML source files\n- Test fixtures\n- Template files\n- Generated code\n\n## Fix\n\nSplit on `]]>` occurrences and use adjacent CDATA sections:\n```\n<![CDATA[some ]]]]><![CDATA[> content]]>\n```\n\nOr escape the sequence before wrapping in CDATA.\n\n## Related\n\n`tools/cat/cat.go` content serialization\n\nSee also: XML spec section 2.7 — CDATA sections may not contain `]]>`"
+  },
+  {
+    "day": 14,
+    "title": "Add aict glob tool for cross-platform pattern expansion with file metadata",
+    "labels": ["enhancement"],
+    "body": "## Description\n\nAdd `aict glob <pattern>` which expands glob patterns and returns matched paths with full file metadata — same attributes as `ls` output.\n\n## Motivation\n\nShell glob expansion happens before the tool runs, stripping the original pattern from output. `aict glob` solves three problems:\n\n1. Pattern is preserved in the XML `pattern` attribute for traceability\n2. Each match includes `size`, `language`, `mime`, `modified` metadata\n3. Consistent cross-platform behavior — Windows shell globbing differs from Unix\n\n## Usage\n\n```bash\naict glob \"src/**/*.go\"\naict glob \"**/*_test.go\" --json\n```\n\n## Proposed XML Output\n\n```xml\n<glob pattern=\"src/**/*.go\" matched=\"42\" timestamp=\"1746123456\">\n  <file name=\"main.go\" absolute=\"/project/src/main.go\"\n        size_bytes=\"2048\" language=\"go\" mime=\"text/x-go\"\n        modified=\"1746120000\" modified_ago_s=\"3456\"/>\n</glob>\n```\n\n## Implementation Notes\n\n- Use `path/filepath.Glob` for single `*` patterns\n- Add `**` recursive glob support manually (stdlib doesn't support `**`)\n- Empty match should produce valid XML with `matched=\"0\"`\n\n## Related\n\n`tools/find/find.go` (similar traversal logic), Phase 4 ROADMAP.md"
+  },
+  {
+    "day": 15,
+    "title": "MCP server buildArgs cannot handle ordered positional arguments for tools like diff",
+    "labels": ["bug"],
+    "body": "## Description\n\nIn `cmd/mcp/server.go`, `buildArgs` processes named flags from `flagMappings` and appends remaining string values as positional arguments. For tools that require **ordered** positionals (like `diff` which needs `oldFile` before `newFile`), there is no mechanism to guarantee argument order.\n\n## Steps to Reproduce\n\nCall `diff` via MCP with:\n```json\n{\"oldPath\": \"/tmp/a.go\", \"newPath\": \"/tmp/b.go\"}\n```\n\nSince Go map iteration is unordered, `buildArgs` may emit `/tmp/b.go /tmp/a.go` — reversing the diff.\n\n## Affected Tools\n\n- `diff` (oldPath, newPath must be ordered)\n- `head`/`tail` with multiple files\n- Any future tool with ordered positional semantics\n\n## Proposed Fix\n\nAdd an `orderedPositionals []string` field to the flag mapping definition that explicitly names keys in the order they should appear as positional arguments:\n\n```go\n\"diff\": {\n  flags: map[string]string{...},\n  positionals: []string{\"oldPath\", \"newPath\"},\n}\n```\n\n## Related\n\n`cmd/mcp/server.go` `buildArgs`, `flagMappings`"
+  }
+]

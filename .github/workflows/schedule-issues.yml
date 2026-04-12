@@ -121,12 +121,12 @@ jobs:
           echo "Creating issue: $TITLE"
           echo "Labels: $LABELS"
 
-          eval gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "$TITLE" \
-            --body-file /tmp/issue_body.md \
-            $LABEL_FLAGS
-
+          CMD=(gh issue create --title "$TITLE" --body-file /tmp/issue_body.md)
+          for label in "${LABELS[@]}"; do
+            CMD+=(--label "$label")
+          done
+          "${CMD[@]}"
+          
           echo "Issue created successfully."
 
       - name: Summary

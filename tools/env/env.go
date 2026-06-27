@@ -110,9 +110,13 @@ func Run(args []string) error {
 			}
 		}
 
+		displayValue := value
+		if isSecret {
+			displayValue = "[REDACTED]"
+		}
 		result.Variables = append(result.Variables, EnvVar{
 			Name:       name,
-			Value:      value,
+			Value:      displayValue,
 			Type:       varType,
 			Present:    "true",
 			Redacted:   fmt.Sprintf("%t", isSecret),

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/synseqack/aict/internal/detect"
+	"github.com/synseqack/aict/internal/filemode"
 	"github.com/synseqack/aict/internal/format"
 	"github.com/synseqack/aict/internal/meta"
 	pathutil "github.com/synseqack/aict/internal/path"
@@ -333,8 +334,8 @@ func sortEntries(entries []fsEntry, cfg Config) {
 func buildEntry(fullPath string, info fs.FileInfo, name string, cfg Config) (LSItem, error) {
 	mode := info.Mode()
 	modTime := info.ModTime().Unix()
-	perms := formatPermissions(mode, info.IsDir(), mode&fs.ModeSymlink != 0)
-	modeStr := "0" + strconv.FormatUint(uint64(mode.Perm()), 8)
+	perms := filemode.FormatPermissions(mode, info.IsDir(), filemode.IsSymlink(mode))
+	modeStr := filemode.ModeOctal(mode)
 	owner, group := lookupOwner(info)
 
 	if mode&fs.ModeSymlink != 0 {
@@ -407,46 +408,14 @@ func buildEntry(fullPath string, info fs.FileInfo, name string, cfg Config) (LSI
 	}, nil
 }
 
-func formatPermissions(mode os.FileMode, isDir bool, isSymlink bool) string {
-	var b strings.Builder
-	b.Grow(10)
-
-	if isSymlink {
-		b.WriteByte('l')
-	} else if isDir {
-		b.WriteByte('d')
-	} else {
-		b.WriteByte('-')
-	}
-
-	for i := 8; i >= 0; i-- {
-		bit := uint(1) << uint(i)
-		switch {
-		case mode&os.FileMode(bit) != 0:
-			switch i % 3 {
-			case 0:
-				b.WriteByte('x')
-			case 1:
-				b.WriteByte('w')
-			case 2:
-				b.WriteByte('r')
-			}
-		default:
-			b.WriteByte('-')
-		}
-	}
-
-	return b.String()
-}
-
 func lookupOwner(info fs.FileInfo) (owner, group string) {
 	sysInfo := info.Sys()
 	if sysInfo == nil {
 		return "unknown", "unknown"
 	}
 
-	uid := getUID(sysInfo)
-	gid := getGID(sysInfo)
+	uid := filemode.UID(sysInfo)
+	gid := filemode.GID(sysInfo)
 
 	owner = "unknown"
 	if u, err := user.LookupId(strconv.FormatUint(uint64(uid), 10)); err == nil {
@@ -463,28 +432,6 @@ func lookupOwner(info fs.FileInfo) (owner, group string) {
 	}
 
 	return owner, group
-}
-
-func getUID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Uid() uint32 }:
-		return v.Uid()
-	case interface{ UID() uint32 }:
-		return v.UID()
-	default:
-		return 0
-	}
-}
-
-func getGID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Gid() uint32 }:
-		return v.Gid()
-	case interface{ GID() uint32 }:
-		return v.GID()
-	default:
-		return 0
-	}
 }
 
 func outputResult(result *LSResult, cfg Config) error {

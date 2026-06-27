@@ -33,16 +33,21 @@ export AICT_XML=1
 
 ### MCP Server (Recommended)
 
-The MCP server exposes every `aict` tool as a callable function to AI assistants.
+The MCP server exposes every `aict` tool as a callable function to AI assistants. It's built into the same binary — no separate install needed.
 
-1. Build the MCP server:
-   ```bash
-   go build -o aict-mcp ./cmd/mcp
+1. Configure your AI client — example for Claude Desktop (`~/.config/claude/claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "aict": {
+         "command": "aict",
+         "args": ["mcp"]
+       }
+     }
+   }
    ```
 
-2. Configure your AI client (see README.md for Claude/Cursor configs)
-
-3. The agent can now call tools directly without shell spawning
+2. The agent can now call tools directly without shell spawning
 
 ## Output Modes
 

@@ -1,12 +1,6 @@
 # MCP Server
 
-`aict` ships a standalone MCP (Model Context Protocol) server binary so AI assistants can call every tool directly — no shell spawning, no output parsing.
-
-## Build
-
-```bash
-go build -o aict-mcp ./cmd/mcp
-```
+`aict` includes a built-in MCP (Model Context Protocol) server so AI assistants can call every tool directly — no shell spawning, no output parsing. The MCP server is a subcommand of the same binary: `aict mcp`.
 
 ## Configure Claude Desktop
 
@@ -16,8 +10,8 @@ Add to `~/.config/claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "aict": {
-      "command": "aict-mcp",
-      "args": []
+      "command": "aict",
+      "args": ["mcp"]
     }
   }
 }
@@ -31,8 +25,8 @@ Add to `.cursor/mcp.json` in your project root:
 {
   "mcpServers": {
     "aict": {
-      "command": "aict-mcp",
-      "args": []
+      "command": "aict",
+      "args": ["mcp"]
     }
   }
 }
@@ -74,6 +68,6 @@ Once connected, every `aict` tool becomes a typed, callable function:
 
 | Issue | Fix |
 |-------|-----|
-| Server won't start | Ensure `aict-mcp` is in your PATH |
+| Server won't start | Ensure `aict` is in your PATH |
 | Tools not showing | Restart your AI client after config change |
 | Permission errors | Check file permissions on target directories |

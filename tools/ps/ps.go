@@ -30,6 +30,7 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
+	Compact bool
 }
 
 type PsResult struct {
@@ -102,6 +103,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -254,7 +257,10 @@ func getUsername(uid string) string {
 
 func outputResult(result *PsResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

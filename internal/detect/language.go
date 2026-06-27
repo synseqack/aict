@@ -317,12 +317,6 @@ func Language(path string) string {
 		}
 	}
 
-	if base != "" && ext == "" {
-		if lang, ok := noExtBaseMap[base]; ok {
-			return lang
-		}
-	}
-
 	return ""
 }
 

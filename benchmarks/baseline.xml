@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<benchmark runs="5" timestamp="1782543846" startup_ms="3.564" go_version="go1.26.4-X:nodwarf5" goos="linux" goarch="amd64" threshold="10">
+  <suite name="ls" description="1000 Go source files" pass="false">
+    <baseline cmd="ls" min_ms="3.859" median_ms="3.974" max_ms="4.491"></baseline>
+    <plain mode="plain" min_ms="50.859" median_ms="51.129" max_ms="52.797" ratio="12.865878208354301" pass="false" note="aict adds MIME/language detection per file"></plain>
+    <xml mode="xml" min_ms="68.899" median_ms="70.329" max_ms="72.433" ratio="17.69728233517866" pass="false"></xml>
+    <observations>
+      <sample index="0" baseline_ms="3.859" plain_ms="50.859" xml_ms="69.82"></sample>
+      <sample index="1" baseline_ms="3.974" plain_ms="51.477" xml_ms="68.899"></sample>
+      <sample index="2" baseline_ms="4.491" plain_ms="50.951" xml_ms="71.377"></sample>
+      <sample index="3" baseline_ms="4.094" plain_ms="52.797" xml_ms="70.329"></sample>
+      <sample index="4" baseline_ms="3.885" plain_ms="51.129" xml_ms="72.433"></sample>
+    </observations>
+  </suite>
+  <suite name="grep" description="pattern match across 100k-line file" pass="false">
+    <baseline cmd="grep" min_ms="1.328" median_ms="1.348" max_ms="2.242"></baseline>
+    <plain mode="plain" min_ms="113.017" median_ms="119.171" max_ms="136.816" ratio="88.40578635014836" pass="false" note="GNU grep uses SIMD/Boyer-Moore; Go regexp is general-purpose"></plain>
+    <xml mode="xml" min_ms="126.421" median_ms="129.681" max_ms="134.021" ratio="96.20252225519287" pass="false"></xml>
+    <observations>
+      <sample index="0" baseline_ms="2.242" plain_ms="136.816" xml_ms="134.021"></sample>
+      <sample index="1" baseline_ms="1.332" plain_ms="119.171" xml_ms="131.935"></sample>
+      <sample index="2" baseline_ms="1.328" plain_ms="113.017" xml_ms="127.863"></sample>
+      <sample index="3" baseline_ms="1.348" plain_ms="115.343" xml_ms="129.681"></sample>
+      <sample index="4" baseline_ms="1.444" plain_ms="119.425" xml_ms="126.421"></sample>
+    </observations>
+  </suite>
+  <suite name="cat" description="stream 100k-line file" pass="false">
+    <baseline cmd="cat" min_ms="1.36" median_ms="1.446" max_ms="2.085"></baseline>
+    <plain mode="plain" min_ms="20.762" median_ms="23.673" max_ms="24.25" ratio="16.37136929460581" pass="false" note="aict scans lines + detects binary/encoding; GNU cat is a raw copy"></plain>
+    <xml mode="xml" min_ms="29.945" median_ms="31.301" max_ms="35.4" ratio="21.646611341632088" pass="false"></xml>
+    <observations>
+      <sample index="0" baseline_ms="1.36" plain_ms="24.25" xml_ms="30.478"></sample>
+      <sample index="1" baseline_ms="1.393" plain_ms="23.673" xml_ms="35.4"></sample>
+      <sample index="2" baseline_ms="2.085" plain_ms="20.762" xml_ms="31.301"></sample>
+      <sample index="3" baseline_ms="1.884" plain_ms="21.104" xml_ms="31.323"></sample>
+      <sample index="4" baseline_ms="1.446" plain_ms="24.021" xml_ms="29.945"></sample>
+    </observations>
+  </suite>
+  <suite name="find" description="walk deep directory tree, filter *.go" pass="true">
+    <baseline cmd="find" min_ms="1.791" median_ms="1.919" max_ms="4.836"></baseline>
+    <plain mode="plain" min_ms="12.733" median_ms="13.145" max_ms="13.703" ratio="6.849921834288692" pass="true"></plain>
+    <xml mode="xml" min_ms="14.932" median_ms="15.301" max_ms="16.303" ratio="7.973423658155289" pass="true"></xml>
+    <observations>
+      <sample index="0" baseline_ms="4.836" plain_ms="13.703" xml_ms="15.267"></sample>
+      <sample index="1" baseline_ms="1.919" plain_ms="12.733" xml_ms="14.932"></sample>
+      <sample index="2" baseline_ms="1.791" plain_ms="13.632" xml_ms="15.301"></sample>
+      <sample index="3" baseline_ms="2.478" plain_ms="13.145" xml_ms="15.518"></sample>
+      <sample index="4" baseline_ms="1.839" plain_ms="12.912" xml_ms="16.303"></sample>
+    </observations>
+  </suite>
+  <suite name="diff" description="1000-line files with 1 added line" pass="true">
+    <baseline cmd="diff" min_ms="0.855" median_ms="0.896" max_ms="1.119"></baseline>
+    <plain mode="plain" min_ms="1.747" median_ms="1.891" max_ms="2.329" ratio="2.1104910714285716" pass="true" note="Myers O(ND) algorithm; comparable to GNU diff"></plain>
+    <xml mode="xml" min_ms="1.987" median_ms="2.135" max_ms="2.538" ratio="2.3828124999999996" pass="true"></xml>
+    <observations>
+      <sample index="0" baseline_ms="1.119" plain_ms="2.329" xml_ms="2.092"></sample>
+      <sample index="1" baseline_ms="0.896" plain_ms="1.747" xml_ms="2.135"></sample>
+      <sample index="2" baseline_ms="0.855" plain_ms="1.865" xml_ms="2.538"></sample>
+      <sample index="3" baseline_ms="1.074" plain_ms="2.078" xml_ms="1.987"></sample>
+      <sample index="4" baseline_ms="0.883" plain_ms="1.891" xml_ms="2.169"></sample>
+    </observations>
+  </suite>
+  <suite name="sed" description="global substitution on 10k-line CSV" pass="true">
+    <baseline cmd="sed" min_ms="3.019" median_ms="3.308" max_ms="5.006"></baseline>
+    <plain mode="plain" min_ms="13.447" median_ms="13.88" max_ms="14.55" ratio="4.1958887545344625" pass="true"></plain>
+    <xml mode="xml" min_ms="15.683" median_ms="16.081" max_ms="17.481" ratio="4.861245465538089" pass="true"></xml>
+    <observations>
+      <sample index="0" baseline_ms="5.006" plain_ms="13.447" xml_ms="16.628"></sample>
+      <sample index="1" baseline_ms="3.019" plain_ms="13.983" xml_ms="15.683"></sample>
+      <sample index="2" baseline_ms="3.091" plain_ms="13.88" xml_ms="16.081"></sample>
+      <sample index="3" baseline_ms="3.308" plain_ms="14.55" xml_ms="15.696"></sample>
+      <sample index="4" baseline_ms="3.465" plain_ms="13.691" xml_ms="17.481"></sample>
+    </observations>
+  </suite>
+  <suite name="awk" description="first-field extraction on 10k-line CSV" pass="true">
+    <baseline cmd="awk" min_ms="3.767" median_ms="4.147" max_ms="8.25"></baseline>
+    <plain mode="plain" min_ms="11.345" median_ms="11.996" max_ms="12.083" ratio="2.8926935133831684" pass="true"></plain>
+    <xml mode="xml" min_ms="10.475" median_ms="10.968" max_ms="11.689" ratio="2.644803472389679" pass="true"></xml>
+    <observations>
+      <sample index="0" baseline_ms="8.25" plain_ms="12.006" xml_ms="10.475"></sample>
+      <sample index="1" baseline_ms="3.843" plain_ms="11.996" xml_ms="10.968"></sample>
+      <sample index="2" baseline_ms="4.147" plain_ms="12.083" xml_ms="11.689"></sample>
+      <sample index="3" baseline_ms="4.323" plain_ms="11.345" xml_ms="11.044"></sample>
+      <sample index="4" baseline_ms="3.767" plain_ms="11.407" xml_ms="10.771"></sample>
+    </observations>
+  </suite>
+  <suite name="wc" description="count lines/words/bytes in 100k-line file" pass="true">
+    <baseline cmd="wc" min_ms="6.183" median_ms="6.236" max_ms="7.112"></baseline>
+    <plain mode="plain" min_ms="15.693" median_ms="16.008" max_ms="16.181" ratio="2.567030147530468" pass="true"></plain>
+    <xml mode="xml" min_ms="16.019" median_ms="16.977" max_ms="17.557" ratio="2.7224182168056448" pass="true"></xml>
+    <observations>
+      <sample index="0" baseline_ms="6.848" plain_ms="15.803" xml_ms="16.019"></sample>
+      <sample index="1" baseline_ms="6.183" plain_ms="16.008" xml_ms="17.473"></sample>
+      <sample index="2" baseline_ms="7.112" plain_ms="16.052" xml_ms="17.557"></sample>
+      <sample index="3" baseline_ms="6.236" plain_ms="16.181" xml_ms="16.751"></sample>
+      <sample index="4" baseline_ms="6.234" plain_ms="15.693" xml_ms="16.977"></sample>
+    </observations>
+  </suite>
+</benchmark>

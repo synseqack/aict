@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -29,6 +28,7 @@ type Config struct {
 	JSON        bool
 	Plain       bool
 	Pretty      bool
+	Compact bool
 }
 
 type CatResult struct {
@@ -103,6 +103,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -301,7 +303,10 @@ func isBinaryContent(data []byte) bool {
 
 func outputResult(result *CatResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
@@ -338,30 +343,3 @@ func writePlain(w io.Writer, result *CatResult) error {
 	return nil
 }
 
-func RunForTest(path string, cfg Config) ([]CatResult, error) {
-	if !cfg.XML && !cfg.JSON && !cfg.Plain {
-		cfg.XML = true
-	}
-
-	paths := []string{path}
-	if strings.HasSuffix(path, "/*") || strings.HasSuffix(path, "/**") {
-		dir := filepath.Dir(path)
-		pattern := filepath.Base(path)
-		matches, err := filepath.Glob(filepath.Join(dir, pattern))
-		if err != nil {
-			return nil, err
-		}
-		paths = matches
-	}
-
-	var results []CatResult
-	for _, p := range paths {
-		result, err := catFile(p, cfg)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, *result)
-	}
-
-	return results, nil
-}

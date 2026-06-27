@@ -25,6 +25,9 @@ func runDu(args []string) (string, error) {
 
 func runDuWithOutput(path string, cfg Config) (*DuResult, error) {
 	cfg.XML = true
+	if cfg.MaxDepth == 0 {
+		cfg.MaxDepth = -1
+	}
 	entries, total, err := calculateDu(path, cfg)
 	if err != nil {
 		return nil, err

@@ -24,6 +24,7 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
+	Compact bool
 }
 
 type SystemResult struct {
@@ -99,6 +100,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		}
 	}
 
@@ -188,7 +191,7 @@ func parseDistro(osRelease string) string {
 }
 
 func getDarwinVersion() string {
-	data, err := os.ReadFile("/System/Library/CoreSpaces/SystemVersion.plist")
+	data, err := os.ReadFile("/System/Library/CoreServices/SystemVersion.plist")
 	if err != nil {
 		return ""
 	}
@@ -207,7 +210,10 @@ func getRuntimeInfo() RuntimeInfo {
 
 func outputResult(result *SystemResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

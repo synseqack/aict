@@ -3,12 +3,10 @@
 ## Option 1: Go Install (Recommended)
 
 ```bash
-# Install both binaries
 go install github.com/synseqack/aict@latest
-go install github.com/synseqack/aict/cmd/mcp@latest
 ```
 
-This places `aict` and `aict-mcp` in your `$GOPATH/bin` directory.
+This places `aict` in your `$GOPATH/bin` directory. The MCP server is built in: `aict mcp`.
 
 ## Option 2: Build from Source
 
@@ -16,7 +14,6 @@ This places `aict` and `aict-mcp` in your `$GOPATH/bin` directory.
 git clone https://github.com/synseqack/aict
 cd aict
 go build -o aict .
-go build -o aict-mcp ./cmd/mcp
 ```
 
 ## Option 3: Docker

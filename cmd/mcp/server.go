@@ -1,4 +1,4 @@
-package main
+package mcpserver
 
 import (
 	"context"
@@ -12,33 +12,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/synseqack/aict/internal/tool"
-
-	_ "github.com/synseqack/aict/tools/basename"
-	_ "github.com/synseqack/aict/tools/cat"
-	_ "github.com/synseqack/aict/tools/checksums"
-	_ "github.com/synseqack/aict/tools/cut"
-	_ "github.com/synseqack/aict/tools/df"
-	_ "github.com/synseqack/aict/tools/diff"
-	_ "github.com/synseqack/aict/tools/dirname"
-	_ "github.com/synseqack/aict/tools/doctor"
-	_ "github.com/synseqack/aict/tools/du"
-	_ "github.com/synseqack/aict/tools/env"
-	_ "github.com/synseqack/aict/tools/file"
-	_ "github.com/synseqack/aict/tools/find"
-	_ "github.com/synseqack/aict/tools/git"
-	_ "github.com/synseqack/aict/tools/grep"
-	_ "github.com/synseqack/aict/tools/head"
-	_ "github.com/synseqack/aict/tools/ls"
-	_ "github.com/synseqack/aict/tools/ps"
-	_ "github.com/synseqack/aict/tools/pwd"
-	_ "github.com/synseqack/aict/tools/realpath"
-	_ "github.com/synseqack/aict/tools/sort"
-	_ "github.com/synseqack/aict/tools/stat"
-	_ "github.com/synseqack/aict/tools/system"
-	_ "github.com/synseqack/aict/tools/tail"
-	_ "github.com/synseqack/aict/tools/tr"
-	_ "github.com/synseqack/aict/tools/uniq"
-	_ "github.com/synseqack/aict/tools/wc"
 )
 
 var flagMappings = map[string]map[string]string{
@@ -187,6 +160,26 @@ var flagMappings = map[string]map[string]string{
 	"git": {
 		"help": "-h",
 	},
+	"jq": {
+		"path": ".",
+		"raw":  "-r",
+	},
+	"sed": {
+		"suppress":       "-n",
+		"script":         "-e",
+		"extended_regex": "-E",
+	},
+	"awk": {
+		"field_sep": "-F",
+		"program":   "-f",
+	},
+	"tar": {
+		"list":    "-t",
+		"extract": "-x",
+	},
+	"completions": {
+		"shell": "bash",
+	},
 }
 
 func toBool(v interface{}) bool {
@@ -297,7 +290,7 @@ func findAICTBinary() string {
 func runAICT(args []string) (string, error) {
 	binaryPath := findAICTBinary()
 
-	aictArgs := append([]string{"--json"}, args...)
+	aictArgs := append([]string{args[0], "--json"}, args[1:]...)
 
 	cmd := exec.Command(binaryPath, aictArgs...)
 	output, err := cmd.Output()
@@ -346,7 +339,7 @@ func toolHandler(toolName string) func(ctx context.Context, req *mcp.CallToolReq
 			}, nil
 		}
 
-		output, err := runAICT(aictArgs)
+		output, err := runAICT(append([]string{toolName}, aictArgs...))
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
@@ -364,21 +357,10 @@ func toolHandler(toolName string) func(ctx context.Context, req *mcp.CallToolReq
 	}
 }
 
-func main() {
+func Serve() error {
 	tools := tool.AllMeta()
 
 	log.Printf("aict MCP server starting with %d tools...", len(tools))
-
-	for name, meta := range tools {
-		schemaJSON, err := json.Marshal(meta.InputSchema)
-		if err != nil {
-			log.Printf("warning: failed to marshal schema for %s: %v", name, err)
-			continue
-		}
-
-		log.Printf("  - %s: %s", name, meta.Description)
-		_ = schemaJSON
-	}
 
 	server := mcp.NewServer(
 		&mcp.Implementation{
@@ -413,6 +395,7 @@ func main() {
 	}
 
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
-		log.Printf("MCP server error: %v", err)
+		return fmt.Errorf("mcp server: %w", err)
 	}
+	return nil
 }

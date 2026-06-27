@@ -29,6 +29,7 @@ type Config struct {
 	JSON      bool
 	Plain     bool
 	Pretty    bool
+	Compact bool
 }
 
 type DuResult struct {
@@ -129,6 +130,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -142,10 +145,6 @@ func parseFlags(args []string) (Config, []string) {
 }
 
 func calculateDu(path string, cfg Config) ([]DuEntry, int64, error) {
-	if cfg.MaxDepth == 0 {
-		cfg.MaxDepth = -1
-	}
-
 	resolved, err := pathutil.Resolve(path)
 	if err != nil {
 		return nil, 0, err
@@ -228,7 +227,10 @@ func walkDir(dirpath, displayPath string, depth int, cfg Config) ([]DuEntry, int
 
 func outputResult(result *DuResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)

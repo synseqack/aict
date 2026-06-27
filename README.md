@@ -4,7 +4,7 @@
 
 **Unix coreutils with XML/JSON output — built for AI agents, not humans.**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/synseqack/aict/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/synseqack/aict/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/synseqack/aict/ci.yml?branch=master&label=CI&style=flat-square)](https://github.com/synseqack/aict/actions)
 [![Go 1.25](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![Release](https://img.shields.io/github/v/release/synseqack/aict?style=flat-square)](https://github.com/synseqack/aict/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/synseqack/aict?style=flat-square)](https://goreportcard.com/report/github.com/synseqack/aict)
@@ -29,7 +29,7 @@ drwxr-xr-x 5 user staff   160 Apr  6 10:00 internal       ← is this a director
 
 ## The solution
 
-`aict` reimplements 22 Unix tools with **structured output** the agent can read directly — no parsing required.
+`aict` reimplements 33 Unix tools with **structured output** the agent can read directly — no parsing required.
 
 ```xml
 $ aict ls src/
@@ -57,13 +57,12 @@ brew tap synseqack/aict
 brew install aict
 ```
 
-This installs both `aict` and `aict-mcp` binaries, plus shell completions for bash and zsh.
+This installs `aict` plus shell completions for bash and zsh. The MCP server is built in: `aict mcp`.
 
 ### Go Install
 
 ```
 go install github.com/synseqack/aict@latest
-go install github.com/synseqack/aict/cmd/mcp@latest
 ```
 
 ### Build from Source
@@ -72,7 +71,6 @@ go install github.com/synseqack/aict/cmd/mcp@latest
 git clone https://github.com/synseqack/aict
 cd aict
 go build -o aict .
-go build -o aict-mcp ./cmd/mcp
 ```
 
 > **Verify install:** `aict --help` should list all available tools.
@@ -102,17 +100,18 @@ export AICT_XML=1
 
 ## Tools
 
-22 tools across 5 categories. Every tool supports `--xml` (default), `--json`, and `--plain`.
+33 tools across 6 categories. Every tool supports `--xml` (default), `--json`, and `--plain`.
 
 | Category | Tools |
 |----------|-------|
 | **File inspection** | `cat` `head` `tail` `file` `stat` `wc` |
 | **Search & compare** | `ls` `find` `grep` `diff` |
 | **Path utilities** | `realpath` `basename` `dirname` `pwd` |
-| **Text processing** | `sort` `uniq` `cut` `tr` |
-| **System & environment** | `env` `system` `ps` `df` `du` `checksums` |
+| **Text processing** | `sort` `uniq` `cut` `tr` `sed` `awk` |
+| **Data & archives** | `jq` `tar` |
+| **System & environment** | `env` `system` `ps` `df` `du` `checksums` `md5sum` `sha1sum` `sha256sum` |
 
-Additional: `git` (status, diff, log, ls-files, blame) · `doctor` (self-diagnostic)
+Additional: `git` (status, diff, log, ls-files, blame) · `completions` (bash/zsh/fish) · `doctor` (self-diagnostic)
 
 ---
 
@@ -133,13 +132,7 @@ All tools follow the same conventions:
 
 ## MCP server
 
-`aict-mcp` exposes all 22 tools as callable MCP functions. AI assistants call them natively — no shell wrapping needed.
-
-**Build:**
-
-```sh
-go build -o aict-mcp ./cmd/mcp
-```
+`aict mcp` exposes all tools as callable MCP functions via stdio transport. AI assistants call them natively — no shell wrapping needed. The MCP server is a subcommand of the main binary.
 
 **Configure Claude Desktop** (`~/.config/claude/claude_desktop_config.json`):
 
@@ -147,23 +140,21 @@ go build -o aict-mcp ./cmd/mcp
 {
   "mcpServers": {
     "aict": {
-      "command": "aict-mcp",
-      "args": []
+      "command": "aict",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-If `aict` is not in PATH, set the binary location explicitly:
+If `aict` is not in PATH, use its full path:
 
 ```json
 {
   "mcpServers": {
     "aict": {
-      "command": "aict-mcp",
-      "env": {
-        "AICT_BINARY": "/full/path/to/aict"
-      }
+      "command": "/usr/local/bin/aict",
+      "args": ["mcp"]
     }
   }
 }
@@ -179,8 +170,8 @@ Add to `~/.claude.json`:
 {
   "mcpServers": {
     "aict": {
-      "command": "aict-mcp",
-      "args": []
+      "command": "aict",
+      "args": ["mcp"]
     }
   }
 }
@@ -192,15 +183,20 @@ Once connected, Claude Code can call `ls`, `grep`, `diff`, and all other tools a
 
 ## Benchmarks
 
-aict trades some speed for semantic richness (language detection, MIME typing, absolute paths). The overhead is intentional.
+aict trades some speed for semantic richness (language detection, MIME typing, absolute paths). The overhead is intentional. Startup cost is ~3.6 ms per invocation.
 
-| Tool | GNU | aict | Ratio | Notes |
-|------|-----|------|-------|-------|
-| `ls` (1000 files) | ~2ms | ~15ms | 7x | ✅ within target |
-| `find` (deep tree) | ~2ms | ~9ms | 5x | ✅ within target |
-| `diff` (1000 lines) | ~1ms | ~10ms | 10x | ✅ within target |
-| `grep` (100k lines) | ~1ms | ~100ms | 100x | language detection per file |
-| `cat` (100k lines) | ~1ms | ~23ms | 17x | encoding + MIME detection |
+| Tool | GNU | `--plain` | `--xml` | Notes |
+|------|-----|-----------|---------|-------|
+| `diff` (1000 lines) | 0.9 ms | 1.9 ms · 2.1× | 2.1 ms · 2.4× | ✅ Myers O(ND) |
+| `wc` (100k lines) | 6.1 ms | 16 ms · 2.6× | 17 ms · 2.7× | ✅ |
+| `awk` (10k lines) | 4.1 ms | 12 ms · 2.9× | 11 ms · 2.6× | ✅ |
+| `sed` (10k lines) | 3.3 ms | 14 ms · 4.2× | 16 ms · 4.9× | ✅ |
+| `find` (deep tree) | 1.9 ms | 13 ms · 6.8× | 15 ms · 8.0× | ✅ |
+| `ls` (1000 files) | 4.0 ms | 51 ms · 12.9× | 70 ms · 17.7× | MIME+lang detection per file |
+| `cat` (100k lines) | 1.4 ms | 24 ms · 16.4× | 31 ms · 21.6× | line-by-line scan + encoding detect |
+| `grep` (100k lines) | 1.3 ms | 119 ms · 88× | 130 ms · 96× | Go regexp vs GNU SIMD |
+
+Medians from 5 runs on Linux/amd64. See [`benchmarks/`](benchmarks/) for methodology and `make bench` to reproduce.
 
 Use `--plain` to skip enrichment when you only need raw content.
 
@@ -214,7 +210,7 @@ XML attributes are denser in a context window. `<file size="1024" lang="go"/>` i
 
 **Why not pipe GNU tools to `jq`?**
 
-`ls`, `cat`, `stat`, `find`, `diff`, and `wc` don't output JSON. `jq` can't help with them. aict provides structured output for the entire toolchain, not just grep.
+`ls`, `cat`, `stat`, `find`, `diff`, and `wc` don't output JSON. `jq` can't help with them. aict provides structured output for the entire toolchain, not just grep. (aict also ships its own `jq` for querying JSON files with path expressions.)
 
 **How does this compare to ripgrep?**
 
@@ -226,7 +222,7 @@ eza and lsd are better `ls` for humans — great colors and formatting. aict out
 
 **Does it work on Windows?**
 
-`ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `checksums`, and path utilities work on Windows. `ps`, `df`, and `system` are Linux/macOS only.
+`ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `sed`, `awk`, `jq`, `tar`, `checksums`, and path utilities work on Windows. `ps`, `df`, and `system` are Linux/macOS only.
 
 **Is this safe to run in a sandboxed environment?**
 

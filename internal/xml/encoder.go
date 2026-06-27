@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"time"
 )
 
 func IsXMLMode() bool {
@@ -28,7 +30,7 @@ func WriteXML(w io.Writer, v interface{}, pretty bool) error {
 func WriteXMLStream(w io.Writer, elementName string, items []string) error {
 	enc := xml.NewEncoder(w)
 
-	ts := os.Getenv("AICT_TIMESTAMP")
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	_, err := fmt.Fprintf(w, "<%s timestamp=\"%s\">", elementName, ts)
 	if err != nil {
 		return err
@@ -84,8 +86,13 @@ func WritePlain(w io.Writer, formatFn func(io.Writer, interface{}) error, v inte
 }
 
 func ErrorElement(code int, msg string, path string) string {
-	if path != "" {
-		return fmt.Sprintf("<error code=\"%d\" msg=\"%s\" path=\"%s\"/>", code, msg, path)
+	type errElem struct {
+		XMLName xml.Name `xml:"error"`
+		Code    int      `xml:"code,attr"`
+		Msg     string   `xml:"msg,attr"`
+		Path    string   `xml:"path,attr,omitempty"`
 	}
-	return fmt.Sprintf("<error code=\"%d\" msg=\"%s\"/>", code, msg)
+	data, _ := xml.Marshal(errElem{Code: code, Msg: msg, Path: path})
+	return string(data)
 }
+

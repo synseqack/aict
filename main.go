@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	mcpserver "github.com/synseqack/aict/cmd/mcp"
 	"github.com/synseqack/aict/internal/tool"
 	_ "github.com/synseqack/aict/tools/basename"
 	_ "github.com/synseqack/aict/tools/cat"
@@ -31,6 +32,12 @@ import (
 	_ "github.com/synseqack/aict/tools/tr"
 	_ "github.com/synseqack/aict/tools/uniq"
 	_ "github.com/synseqack/aict/tools/wc"
+
+	_ "github.com/synseqack/aict/tools/awk"
+	_ "github.com/synseqack/aict/tools/completions"
+	_ "github.com/synseqack/aict/tools/jq"
+	_ "github.com/synseqack/aict/tools/sed"
+	_ "github.com/synseqack/aict/tools/tar"
 )
 
 func main() {
@@ -50,8 +57,16 @@ func run(args []string) error {
 	subArgs := args[1:]
 
 	if toolName == "help" || toolName == "--help" || toolName == "-h" {
-		printUsage()
+		if len(subArgs) > 0 {
+			printToolHelp(subArgs[0])
+		} else {
+			printUsage()
+		}
 		return nil
+	}
+
+	if toolName == "mcp" {
+		return mcpserver.Serve()
 	}
 
 	tools := tool.All()
@@ -63,6 +78,35 @@ func run(args []string) error {
 	}
 
 	return fn(subArgs)
+}
+
+func printToolHelp(name string) {
+	allMeta := tool.AllMeta()
+	m, ok := allMeta[name]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "aict: unknown command: %s\n", name)
+		printUsage()
+		return
+	}
+
+	fmt.Printf("aict %s — %s\n\n", name, m.Description)
+
+	props, ok := m.InputSchema["properties"].(map[string]interface{})
+	if !ok || len(props) == 0 {
+		fmt.Println("No flags available.")
+		return
+	}
+
+	fmt.Println("Flags:")
+	for flag, raw := range props {
+		info, _ := raw.(map[string]interface{})
+		desc, _ := info["description"].(string)
+		typ, _ := info["type"].(string)
+		if typ == "" {
+			typ = "string"
+		}
+		fmt.Printf("  --%-20s (%s) %s\n", flag, typ, desc)
+	}
 }
 
 func printUsage() {
@@ -84,6 +128,8 @@ Commands:
 		}
 	}
 
+	fmt.Printf("  %-12s %s\n", "mcp", "Start MCP server (stdio transport)")
+
 	fmt.Print(`
 Output modes:
   --xml         XML output (default if AICT_XML=1)
@@ -95,5 +141,6 @@ Examples:
   aict grep "func" . -r
   aict cat main.go
   aict find . -name "*.go"
+  aict mcp
 `)
 }

@@ -3,6 +3,7 @@ package doctor
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,7 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
+	Compact bool
 }
 
 type DoctorResult struct {
@@ -76,6 +78,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		}
 	}
 
@@ -216,7 +220,10 @@ func checkShellCompletions() Check {
 
 func outputResult(result *DoctorResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
@@ -224,7 +231,7 @@ func outputResult(result *DoctorResult, cfg Config) error {
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }
 
-func writePlain(w *os.File, result *DoctorResult) error {
+func writePlain(w io.Writer, result *DoctorResult) error {
 	fmt.Fprintf(w, "aict doctor - Diagnostic Report\n")
 	fmt.Fprintf(w, "================================\n")
 	fmt.Fprintf(w, "OS: %s\n", result.OS)

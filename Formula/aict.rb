@@ -29,7 +29,6 @@ class Aict < Formula
 
   def install
     bin.install "aict"
-    bin.install "aict-mcp"
     bash_completion.install "completions/aict.bash" => "aict"
     zsh_completion.install "completions/aict.zsh" => "_aict"
   end

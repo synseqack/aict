@@ -3,6 +3,7 @@ package git
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -24,6 +25,7 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
+	Compact bool
 }
 
 type GitResult struct {
@@ -85,7 +87,7 @@ func Run(args []string) error {
 	cfg, subcmd, subArgs := parseFlags(args)
 
 	if subcmd == "" {
-		return fmt.Errorf("git subcommand required: status, diff, log, ls-files, blame")
+		return fmt.Errorf("git subcommand required: status, diff, log, ls-files, blame, show")
 	}
 
 	cfg.Subcommand = subcmd
@@ -104,6 +106,8 @@ func Run(args []string) error {
 		result, err = gitLsFiles(subArgs)
 	case "blame":
 		result, err = gitBlame(subArgs)
+	case "show":
+		result, err = gitShow(subArgs)
 	default:
 		return fmt.Errorf("unknown git subcommand: %s", subcmd)
 	}
@@ -131,8 +135,10 @@ func parseFlags(args []string) (Config, string, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
-			if subcmd == "" && (arg == "status" || arg == "diff" || arg == "log" || arg == "ls-files" || arg == "blame") {
+			if subcmd == "" && (arg == "status" || arg == "diff" || arg == "log" || arg == "ls-files" || arg == "blame" || arg == "show") {
 				subcmd = arg
 			} else {
 				subArgs = append(subArgs, arg)
@@ -351,9 +357,69 @@ func gitBlame(args []string) (*GitResult, error) {
 	return result, nil
 }
 
+func gitShow(args []string) (*GitResult, error) {
+	result := &GitResult{
+		Timestamp: meta.Now(),
+		Subcmd:    "show",
+	}
+
+	ref := "HEAD"
+	if len(args) > 0 {
+		ref = args[0]
+	}
+
+	// Get commit metadata
+	commitOut, err := runGit("show", "--no-patch", "--format=%H|%h|%an|%at|%s", ref)
+	if err != nil {
+		result.Errors = append(result.Errors, GitError{Code: 1, Msg: err.Error()})
+		return result, nil
+	}
+
+	now := meta.Now()
+	for _, line := range strings.Split(strings.TrimSpace(commitOut), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 5)
+		if len(parts) >= 5 {
+			authorDate, _ := strconv.ParseInt(parts[3], 10, 64)
+			result.Log = append(result.Log, Commit{
+				Hash:       parts[0],
+				ShortHash:  parts[1],
+				Author:     parts[2],
+				AuthorDate: authorDate,
+				DateAgo:    now - authorDate,
+				Message:    parts[4],
+			})
+		}
+	}
+
+	// Get changed files
+	statOut, err := runGit("show", "--stat", "--format=", ref)
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(statOut), "\n") {
+			if line == "" || strings.Contains(line, "changed") {
+				continue
+			}
+			parts := strings.SplitN(line, "|", 2)
+			if len(parts) >= 1 {
+				path := strings.TrimSpace(parts[0])
+				if path != "" {
+					result.Status = append(result.Status, Status{Path: path, Status: "M"})
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func outputResult(result *GitResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
@@ -361,7 +427,7 @@ func outputResult(result *GitResult, cfg Config) error {
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }
 
-func writePlain(w *os.File, result *GitResult) error {
+func writePlain(w io.Writer, result *GitResult) error {
 	switch result.Subcmd {
 	case "status":
 		for _, s := range result.Status {
@@ -382,6 +448,13 @@ func writePlain(w *os.File, result *GitResult) error {
 	case "blame":
 		for _, b := range result.Blame {
 			fmt.Fprintf(w, "%s (%s %d) %s\n", b.Commit, b.Author, b.LineNum, b.Content)
+		}
+	case "show":
+		for _, c := range result.Log {
+			fmt.Fprintf(w, "commit %s\nAuthor: %s\n\n    %s\n\n", c.Hash, c.Author, c.Message)
+		}
+		for _, s := range result.Status {
+			fmt.Fprintf(w, "%s\n", s.Path)
 		}
 	}
 	return nil

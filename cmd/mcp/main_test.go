@@ -1,4 +1,4 @@
-package main
+package mcpserver
 
 import (
 	"context"
@@ -10,9 +10,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/synseqack/aict/internal/tool"
 
+	_ "github.com/synseqack/aict/tools/awk"
 	_ "github.com/synseqack/aict/tools/basename"
 	_ "github.com/synseqack/aict/tools/cat"
 	_ "github.com/synseqack/aict/tools/checksums"
+	_ "github.com/synseqack/aict/tools/completions"
 	_ "github.com/synseqack/aict/tools/cut"
 	_ "github.com/synseqack/aict/tools/df"
 	_ "github.com/synseqack/aict/tools/diff"
@@ -25,14 +27,17 @@ import (
 	_ "github.com/synseqack/aict/tools/git"
 	_ "github.com/synseqack/aict/tools/grep"
 	_ "github.com/synseqack/aict/tools/head"
+	_ "github.com/synseqack/aict/tools/jq"
 	_ "github.com/synseqack/aict/tools/ls"
 	_ "github.com/synseqack/aict/tools/ps"
 	_ "github.com/synseqack/aict/tools/pwd"
 	_ "github.com/synseqack/aict/tools/realpath"
+	_ "github.com/synseqack/aict/tools/sed"
 	_ "github.com/synseqack/aict/tools/sort"
 	_ "github.com/synseqack/aict/tools/stat"
 	_ "github.com/synseqack/aict/tools/system"
 	_ "github.com/synseqack/aict/tools/tail"
+	_ "github.com/synseqack/aict/tools/tar"
 	_ "github.com/synseqack/aict/tools/tr"
 	_ "github.com/synseqack/aict/tools/uniq"
 	_ "github.com/synseqack/aict/tools/wc"

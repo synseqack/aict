@@ -46,7 +46,10 @@ func GetMeta(name string) (ToolMeta, bool) {
 }
 
 func MustMarshalJSON(v interface{}) string {
-	b, _ := json.Marshal(v)
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
 	return string(b)
 }
 
@@ -89,9 +92,9 @@ func GenerateSchema(name string, description string, configPtr interface{}) Tool
 
 		fieldName := field.Name
 		jsonTag := field.Tag.Get("json")
-		if jsonTag != "" && !strings.Contains(jsonTag, ",") {
+		if jsonTag != "" {
 			fieldName = strings.Split(jsonTag, ",")[0]
-		} else if jsonTag == "" {
+		} else {
 			fieldName = strings.ToLower(field.Name)
 		}
 
@@ -133,12 +136,4 @@ func GenerateSchema(name string, description string, configPtr interface{}) Tool
 
 	result.InputSchema = schema
 	return result
-}
-
-func descriptionFromField(field reflect.StructField) string {
-	desc := field.Tag.Get("desc")
-	if desc != "" {
-		return desc
-	}
-	return strings.ToLower(field.Name)
 }

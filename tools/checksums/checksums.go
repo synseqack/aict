@@ -35,6 +35,7 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
+	Compact bool
 }
 
 type ChecksumResult struct {
@@ -63,77 +64,13 @@ type ChecksumError struct {
 	Path    string   `xml:"path,attr"`
 }
 
-func Run(args []string) error {
-	cfg, paths := parseFlags(args, []string{"md5", "sha1", "sha256"})
+func Run(args []string) error      { return runWithAlgos(args, []string{"md5", "sha1", "sha256"}) }
+func RunMD5(args []string) error    { return runWithAlgos(args, []string{"md5"}) }
+func RunSHA256(args []string) error { return runWithAlgos(args, []string{"sha256"}) }
+func RunSHA1(args []string) error   { return runWithAlgos(args, []string{"sha1"}) }
 
-	if len(paths) == 0 {
-		return outputResult(&ChecksumResult{Timestamp: meta.Now()}, cfg)
-	}
-
-	result := &ChecksumResult{
-		Timestamp: meta.Now(),
-	}
-
-	for _, path := range paths {
-		checksum, err := calculateChecksums(path, cfg)
-		if err != nil {
-			result.Errors = append(result.Errors, ChecksumError{Code: 1, Msg: err.Error(), Path: path})
-			continue
-		}
-		result.Files = append(result.Files, checksum)
-	}
-
-	return outputResult(result, cfg)
-}
-
-func RunMD5(args []string) error {
-	cfg, paths := parseFlags(args, []string{"md5"})
-
-	if len(paths) == 0 {
-		return outputResult(&ChecksumResult{Timestamp: meta.Now()}, cfg)
-	}
-
-	result := &ChecksumResult{
-		Timestamp: meta.Now(),
-	}
-
-	for _, path := range paths {
-		checksum, err := calculateChecksums(path, cfg)
-		if err != nil {
-			result.Errors = append(result.Errors, ChecksumError{Code: 1, Msg: err.Error(), Path: path})
-			continue
-		}
-		result.Files = append(result.Files, checksum)
-	}
-
-	return outputResult(result, cfg)
-}
-
-func RunSHA256(args []string) error {
-	cfg, paths := parseFlags(args, []string{"sha256"})
-
-	if len(paths) == 0 {
-		return outputResult(&ChecksumResult{Timestamp: meta.Now()}, cfg)
-	}
-
-	result := &ChecksumResult{
-		Timestamp: meta.Now(),
-	}
-
-	for _, path := range paths {
-		checksum, err := calculateChecksums(path, cfg)
-		if err != nil {
-			result.Errors = append(result.Errors, ChecksumError{Code: 1, Msg: err.Error(), Path: path})
-			continue
-		}
-		result.Files = append(result.Files, checksum)
-	}
-
-	return outputResult(result, cfg)
-}
-
-func RunSHA1(args []string) error {
-	cfg, paths := parseFlags(args, []string{"sha1"})
+func runWithAlgos(args []string, defaultAlgos []string) error {
+	cfg, paths := parseFlags(args, defaultAlgos)
 
 	if len(paths) == 0 {
 		return outputResult(&ChecksumResult{Timestamp: meta.Now()}, cfg)
@@ -179,6 +116,8 @@ func parseFlags(args []string, defaultAlgos []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -254,7 +193,10 @@ func calculateChecksums(path string, cfg Config) (ChecksumFile, error) {
 
 func outputResult(result *ChecksumResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/synseqack/aict/internal/detect"
 	"github.com/synseqack/aict/internal/meta"
@@ -47,6 +48,7 @@ type Config struct {
 	JSON             bool
 	Plain            bool
 	Pretty           bool
+	Compact bool
 }
 
 type GrepResult struct {
@@ -208,6 +210,8 @@ func parseFlags(args []string) (Config, string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		case "--workers":
 			if i+1 < len(args) {
 				cfg.Workers = args[i+1]
@@ -315,10 +319,12 @@ func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 	resultChan := make(chan searchResult, 50)
 
 	var wg sync.WaitGroup
+	var searchedFiles atomic.Int64
+
 	workerCount := 4
 	if cfg.Workers == "auto" {
 		workerCount = runtime.NumCPU()
-	} else if cfg.Workers == "" {
+	} else if cfg.Workers != "" {
 		n, err := strconv.Atoi(cfg.Workers)
 		if err == nil && n > 0 {
 			workerCount = n
@@ -371,7 +377,7 @@ func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 				}
 			}
 
-			result.SearchedFiles++
+			searchedFiles.Add(1)
 			fileChan <- path
 
 			return nil
@@ -401,6 +407,7 @@ func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 		}
 	}
 
+	result.SearchedFiles = int(searchedFiles.Load())
 	return result
 }
 
@@ -417,12 +424,9 @@ func buildRegexp(pattern string, cfg Config) (*regexp.Regexp, error) {
 	if cfg.CaseInsensitive {
 		flags += "i"
 	}
-	if cfg.ExtendedRegex {
-		flags += "i"
-	}
 
 	if flags != "" {
-		return regexp.Compile("(??" + flags + ")" + pattern)
+		return regexp.Compile("(?" + flags + ")" + pattern)
 	}
 
 	return regexp.Compile(pattern)
@@ -524,7 +528,10 @@ func findMatches(path string, re *regexp.Regexp, cfg Config) []GrepMatch {
 
 func outputResult(result *GrepResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)

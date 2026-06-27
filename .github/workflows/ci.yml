@@ -65,9 +65,6 @@ jobs:
       - name: Build aict
         run: go build -o aict ./main.go
 
-      - name: Build aict-mcp
-        run: go build -o aict-mcp ./cmd/mcp
-
       - name: Test binary
         run: |
           ./aict --help
@@ -109,17 +106,6 @@ jobs:
             done
           done
           
-          # Build aict-mcp for all platforms
-          for os in linux darwin windows; do
-            for arch in amd64 arm64; do
-              ext=""
-              if [ "$os" = "windows" ]; then
-                ext=".exe"
-              fi
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-mcp-${os}-${arch}${ext} ./cmd/mcp
-              cp aict-mcp-${os}-${arch}${ext} releases/
-            done
-          done
 
       - name: Create platform tarballs
         run: |
@@ -133,7 +119,6 @@ jobs:
               staging="aict-${TAG}-${os}-${arch}"
               mkdir -p "$staging/completions"
               cp "aict-${os}-${arch}${ext}" "$staging/aict${ext}"
-              cp "aict-mcp-${os}-${arch}${ext}" "$staging/aict-mcp${ext}"
               cp completions/aict.bash "$staging/completions/"
               cp completions/aict.zsh "$staging/completions/"
               cp LICENSE "$staging/"
@@ -186,17 +171,6 @@ jobs:
             done
           done
           
-          # Build aict-mcp for all platforms
-          for os in linux darwin windows; do
-            for arch in amd64 arm64; do
-              ext=""
-              if [ "$os" = "windows" ]; then
-                ext=".exe"
-              fi
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-mcp-${os}-${arch}${ext} ./cmd/mcp
-              cp aict-mcp-${os}-${arch}${ext} releases/
-            done
-          done
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

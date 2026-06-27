@@ -1,0 +1,49 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  bench:
+    name: aict vs GNU coreutils
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build aict
+        run: go build -o aict .
+
+      - name: Run external benchmark suite
+        run: go run ./cmd/bench -runs 5 -output benchmarks/results.xml
+        # Exits 1 if any suite exceeds the 10x threshold — treated as informational,
+        # not a hard block, because grep/cat are intentionally above threshold.
+        continue-on-error: true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-${{ github.sha }}
+          path: benchmarks/results.xml
+          retention-days: 90
+
+      - name: Run Go testing.B benchmarks (grep / cat / ls)
+        run: |
+          go test -bench=. -benchmem -count=3 -timeout=120s \
+            ./tools/grep/ ./tools/cat/ ./tools/ls/ \
+            | tee benchmarks/go-bench-${{ github.sha }}.txt
+
+      - name: Upload Go benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-bench-${{ github.sha }}
+          path: benchmarks/go-bench-*.txt
+          retention-days: 90

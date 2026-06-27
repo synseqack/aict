@@ -34,6 +34,7 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
+	Compact bool
 }
 
 type DiffResult struct {
@@ -52,6 +53,8 @@ type DiffResult struct {
 }
 
 func (*DiffResult) isDiffResult() {}
+
+var wsRe = regexp.MustCompile(`\s+`)
 
 type DiffHunk struct {
 	XMLName  xml.Name   `xml:"hunk"`
@@ -189,6 +192,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)
@@ -251,7 +256,7 @@ func readLines(path string, ignoreSpace bool) ([]string, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if ignoreSpace {
-			line = regexp.MustCompile(`\s+`).ReplaceAllString(line, " ")
+			line = wsRe.ReplaceAllString(line, " ")
 		}
 		lines = append(lines, line)
 	}
@@ -364,47 +369,120 @@ func slicesEqual(a, b []string) bool {
 	return true
 }
 
-func computeLCS(oldLines, newLines []string) []lcsEdit {
-	N, M := len(oldLines), len(newLines)
-
-	dp := make([][]int, N+1)
-	for i := range dp {
-		dp[i] = make([]int, M+1)
+// computeLCS implements Myers O(ND) diff algorithm. It returns the same
+// []lcsEdit sequence (deleted/inserted/equal) as before; callers are unchanged.
+func computeLCS(a, b []string) []lcsEdit {
+	N, M := len(a), len(b)
+	if N == 0 && M == 0 {
+		return nil
 	}
 
-	for i := 1; i <= N; i++ {
-		for j := 1; j <= M; j++ {
-			if oldLines[i-1] == newLines[j-1] {
-				dp[i][j] = dp[i-1][j-1] + 1
+	max := N + M
+	// v maps diagonal k (offset by max) to the furthest x reached on that diagonal.
+	v := make([]int, 2*max+1)
+	// trace stores v snapshots per edit distance d for backtracking.
+	trace := make([][]int, 0, max+1)
+
+	found := false
+	var endD, endK int
+
+outer:
+	for d := 0; d <= max; d++ {
+		snap := make([]int, len(v))
+		copy(snap, v)
+		trace = append(trace, snap)
+
+		for k := -d; k <= d; k += 2 {
+			var x int
+			if k == -d || (k != d && v[k-1+max] < v[k+1+max]) {
+				x = v[k+1+max]
 			} else {
-				if dp[i-1][j] > dp[i][j-1] {
-					dp[i][j] = dp[i-1][j]
-				} else {
-					dp[i][j] = dp[i][j-1]
-				}
+				x = v[k-1+max] + 1
+			}
+			y := x - k
+			for x < N && y < M && a[x] == b[y] {
+				x++
+				y++
+			}
+			v[k+max] = x
+			if x >= N && y >= M {
+				endD = d
+				endK = k
+				found = true
+				break outer
 			}
 		}
 	}
 
-	var edits []lcsEdit
-	i, j := N, M
-
-	for i > 0 || j > 0 {
-		if i > 0 && j > 0 && oldLines[i-1] == newLines[j-1] {
-			edits = append(edits, lcsEdit{kind: equal, oldIndex: i - 1, newIndex: j - 1})
-			i--
-			j--
-		} else if j > 0 && (i == 0 || dp[i][j-1] >= dp[i-1][j]) {
-			edits = append(edits, lcsEdit{kind: inserted, oldIndex: i - 1, newIndex: j - 1})
-			j--
-		} else if i > 0 {
-			edits = append(edits, lcsEdit{kind: deleted, oldIndex: i - 1, newIndex: j - 1})
-			i--
+	if !found {
+		// Fallback: all deleted then all inserted.
+		var edits []lcsEdit
+		for i := range a {
+			edits = append(edits, lcsEdit{kind: deleted, oldIndex: i})
 		}
+		for j := range b {
+			edits = append(edits, lcsEdit{kind: inserted, newIndex: j})
+		}
+		return edits
 	}
 
-	for l, r := 0, len(edits)-1; l < r; l, r = l+1, r-1 {
-		edits[l], edits[r] = edits[r], edits[l]
+	// Backtrack through trace to reconstruct the edit path.
+	type move struct{ x, y, px, py int }
+	var path []move
+
+	k := endK
+	for d := endD; d > 0; d-- {
+		prev := trace[d-1]
+		var pk int
+		if k == -d || (k != d && prev[k-1+max] < prev[k+1+max]) {
+			pk = k + 1
+		} else {
+			pk = k - 1
+		}
+		px := prev[pk+max]
+		py := px - pk
+		x := trace[d][k+max]
+		y := x - k
+		path = append(path, move{x, y, px, py})
+		k = pk
+	}
+
+	// path is in reverse; read it forward to emit edits.
+	var edits []lcsEdit
+	x, y := 0, 0
+	for i := len(path) - 1; i >= 0; i-- {
+		m := path[i]
+		// Emit snake (equal) segments from current (x,y) to (m.px,m.py)
+		for x < m.px && y < m.py {
+			edits = append(edits, lcsEdit{kind: equal, oldIndex: x, newIndex: y})
+			x++
+			y++
+		}
+		// Emit the single non-diagonal move
+		if m.x > m.px && m.y == m.py {
+			// delete from a
+			edits = append(edits, lcsEdit{kind: deleted, oldIndex: x, newIndex: y})
+			x++
+		} else if m.y > m.py && m.x == m.px {
+			// insert from b
+			edits = append(edits, lcsEdit{kind: inserted, oldIndex: x, newIndex: y})
+			y++
+		}
+	}
+	// Emit remaining snake after last move
+	for x < N && y < M {
+		edits = append(edits, lcsEdit{kind: equal, oldIndex: x, newIndex: y})
+		x++
+		y++
+	}
+	// Emit any remaining deletes/inserts
+	for x < N {
+		edits = append(edits, lcsEdit{kind: deleted, oldIndex: x, newIndex: y})
+		x++
+	}
+	for y < M {
+		edits = append(edits, lcsEdit{kind: inserted, oldIndex: x, newIndex: y})
+		y++
 	}
 
 	return edits
@@ -471,7 +549,10 @@ func diffDirectories(oldDir, newDir string, cfg Config) error {
 
 func outputResult(result *DiffResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)

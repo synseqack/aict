@@ -8,6 +8,20 @@ import (
 	"testing"
 )
 
+var zeroSizeTypes = map[string]bool{
+	"sysfs": true, "proc": true, "devpts": true, "cgroup2": true, "pstore": true,
+	"debugfs": true, "tracefs": true, "mqueue": true, "hugetlbfs": true, "fusectl": true,
+	"configfs": true, "securityfs": true, "bpf": true, "autofs": true, "binfmt_misc": true,
+	"nsfs": true, "selinuxfs": true, "rpc_pipefs": true,
+}
+
+func isZeroSizeType(fsType string) bool {
+	if v, ok := zeroSizeTypes[fsType]; ok {
+		return v
+	}
+	return strings.HasPrefix(fsType, "fuse.")
+}
+
 func runDf(args []string) (string, error) {
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -129,8 +143,8 @@ func TestDf_HasFilesystems(t *testing.T) {
 		if fs.Mount == "" {
 			t.Error("expected mount point to be set")
 		}
-		if fs.SizeBytes == 0 && fs.Type != "sysfs" && fs.Type != "proc" && fs.Type != "devpts" && fs.Type != "cgroup2" && fs.Type != "pstore" && fs.Type != "debugfs" && fs.Type != "tracefs" && fs.Type != "mqueue" && fs.Type != "hugetlbfs" && fs.Type != "fusectl" && fs.Type != "configfs" && fs.Type != "securityfs" && fs.Type != "bpf" && fs.Type != "autofs" && fs.Type != "binfmt_misc" && fs.Type != "nsfs" && !strings.HasPrefix(fs.Device, "/dev/loop") {
-			t.Error("expected size to be set")
+		if fs.SizeBytes == 0 && !isZeroSizeType(fs.Type) && !strings.HasPrefix(fs.Device, "/dev/loop") {
+			t.Errorf("expected size to be set for type %q device %q mount %q", fs.Type, fs.Device, fs.Mount)
 		}
 	}
 }

@@ -12,13 +12,19 @@ func runPs(args []string) (string, error) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
+	var outBuf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		outBuf.ReadFrom(r)
+		close(done)
+	}()
+
 	err := Run(args)
 
 	w.Close()
 	os.Stdout = oldStdout
+	<-done
 
-	var outBuf bytes.Buffer
-	outBuf.ReadFrom(r)
 	return outBuf.String(), err
 }
 
@@ -44,13 +50,18 @@ func TestPs_XMLValidity(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
+	var outBuf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		outBuf.ReadFrom(r)
+		close(done)
+	}()
+
 	err := Run([]string{})
 
 	w.Close()
 	os.Stdout = oldStdout
-
-	var outBuf bytes.Buffer
-	outBuf.ReadFrom(r)
+	<-done
 
 	if err != nil {
 		t.Fatal(err)

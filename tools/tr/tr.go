@@ -19,15 +19,15 @@ func init() {
 }
 
 type Config struct {
-	Delete    bool `flag:"" desc:"Delete characters in set1"`
-	Squeeze   bool `flag:"" desc:"Squeeze repeated characters"`
-	Translate bool `flag:"" desc:"Translate characters"`
-	Set1      string
-	Set2      string
-	XML       bool
-	JSON      bool
-	Plain     bool
-	Pretty    bool
+	Delete  bool `flag:"" desc:"Delete characters in set1"`
+	Squeeze bool `flag:"" desc:"Squeeze repeated characters"`
+	Set1    string
+	Set2    string
+	XML     bool
+	JSON    bool
+	Plain   bool
+	Pretty  bool
+	Compact bool
 }
 
 type TrResult struct {
@@ -81,6 +81,8 @@ func parseFlags(args []string) (Config, error) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -145,19 +147,11 @@ func processTr(lines []string, cfg Config) []string {
 	for _, line := range lines {
 		if cfg.Delete {
 			output = append(output, deleteChars(line, set1))
-		} else if cfg.Translate || cfg.Set2 != "" {
+		} else if cfg.Set2 != "" {
 			output = append(output, translateChars(line, set1, set2))
 		} else if cfg.Squeeze {
 			output = append(output, squeezeChars(line, set1))
 		}
-	}
-
-	if cfg.Squeeze && !cfg.Delete && cfg.Set2 == "" {
-		var squeezed []string
-		for _, line := range lines {
-			squeezed = append(squeezed, squeezeChars(line, ""))
-		}
-		output = squeezed
 	}
 
 	return output
@@ -300,7 +294,10 @@ func squeezeChars(s, set string) string {
 
 func outputResult(result *TrResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/synseqack/aict/internal/detect"
+	"github.com/synseqack/aict/internal/filemode"
 	"github.com/synseqack/aict/internal/meta"
 	pathutil "github.com/synseqack/aict/internal/path"
 	"github.com/synseqack/aict/internal/tool"
@@ -34,6 +35,7 @@ type Config struct {
 	JSON     bool
 	Plain    bool
 	Pretty   bool
+	Compact bool
 }
 
 type FindResult struct {
@@ -159,6 +161,8 @@ func parseFlags(args []string) (Config, string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)
@@ -234,7 +238,7 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *FindRe
 			result.Matches = append(result.Matches, FindFile{
 				Path:         path,
 				Absolute:     path,
-				Type:         getFileType(info),
+				Type:         filemode.FileType(info),
 				SizeBytes:    info.Size(),
 				Modified:     info.ModTime().Unix(),
 				ModifiedAgoS: meta.AgoSeconds(info.ModTime().Unix()),
@@ -334,35 +338,12 @@ func evaluateConditions(path string, info os.FileInfo, cfg Config, depth int) bo
 	return matches
 }
 
-func getFileType(info os.FileInfo) string {
-	mode := info.Mode()
-	if mode&os.ModeSymlink != 0 {
-		return "symlink"
-	}
-	if mode.IsDir() {
-		return "directory"
-	}
-	if mode.IsRegular() {
-		return "file"
-	}
-	if mode&os.ModeDevice != 0 {
-		return "block"
-	}
-	if mode&os.ModeCharDevice != 0 {
-		return "character"
-	}
-	if mode&os.ModeNamedPipe != 0 {
-		return "pipe"
-	}
-	if mode&os.ModeSocket != 0 {
-		return "socket"
-	}
-	return "unknown"
-}
-
 func outputResult(result *FindResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

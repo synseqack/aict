@@ -29,6 +29,7 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
+	Compact bool
 }
 
 type EnvResult struct {
@@ -136,6 +137,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -200,7 +203,7 @@ func classifyType(name, value string) string {
 
 func parsePath(pathValue string) []string {
 	var entries []string
-	for _, p := range strings.Split(pathValue, ":") {
+	for _, p := range strings.Split(pathValue, string(os.PathListSeparator)) {
 		if p != "" {
 			abs, _ := filepath.Abs(p)
 			entries = append(entries, abs)
@@ -211,7 +214,10 @@ func parsePath(pathValue string) []string {
 
 func outputResult(result *EnvResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

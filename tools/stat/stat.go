@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/user"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/synseqack/aict/internal/detect"
+	"github.com/synseqack/aict/internal/filemode"
 	"github.com/synseqack/aict/internal/format"
 	"github.com/synseqack/aict/internal/meta"
 	pathutil "github.com/synseqack/aict/internal/path"
@@ -29,6 +29,7 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
+	Compact bool
 }
 
 type StatResult struct {
@@ -108,6 +109,8 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--compact", "-compact":
+			cfg.Compact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -163,8 +166,8 @@ func statPath(path string, cfg Config) (*StatResult, error) {
 		result.Inode = getIno(sysInfo)
 		result.Links = int(getNlink(sysInfo))
 		result.Device = getDev(sysInfo)
-		result.UID = getUID(sysInfo)
-		result.GID = getGID(sysInfo)
+		result.UID = filemode.UID(sysInfo)
+		result.GID = filemode.GID(sysInfo)
 
 		if owner, err := user.LookupId(strconv.FormatUint(uint64(result.UID), 10)); err == nil {
 			result.Owner = owner.Username
@@ -205,8 +208,10 @@ func statPath(path string, cfg Config) (*StatResult, error) {
 			result.CtimeAgoS = meta.AgoSeconds(info.ModTime().Unix())
 		}
 
-		result.Birth = 0
-		result.BirthAgoS = 0
+		if birthSec := getBirthSec(resolved.Absolute); birthSec > 0 {
+			result.Birth = birthSec
+			result.BirthAgoS = meta.AgoSeconds(birthSec)
+		}
 	} else {
 		result.Atime = info.ModTime().Unix()
 		result.AtimeAgoS = meta.AgoSeconds(info.ModTime().Unix())
@@ -220,9 +225,9 @@ func statPath(path string, cfg Config) (*StatResult, error) {
 
 	result.SizeBytes = info.Size()
 	result.SizeHuman = format.Size(uint64(result.SizeBytes))
-	result.Permissions = formatPermissions(info.Mode())
-	result.ModeOctal = "0" + strconv.FormatUint(uint64(info.Mode().Perm()), 8)
-	result.Type = getFileType(info)
+	result.Permissions = filemode.FormatPermissions(info.Mode(), info.IsDir(), filemode.IsSymlink(info.Mode()))
+	result.ModeOctal = filemode.ModeOctal(info.Mode())
+	result.Type = filemode.FileType(info)
 
 	mime := "application/octet-stream"
 	language := ""
@@ -236,80 +241,12 @@ func statPath(path string, cfg Config) (*StatResult, error) {
 	return result, nil
 }
 
-func formatPermissions(mode os.FileMode) string {
-	var b strings.Builder
-	b.Grow(10)
-
-	if mode&os.ModeSymlink != 0 {
-		b.WriteByte('l')
-	} else if mode.IsDir() {
-		b.WriteByte('d')
-	} else {
-		b.WriteByte('-')
-	}
-
-	for i := 8; i >= 0; i-- {
-		bit := uint(1) << uint(i)
-		switch {
-		case mode&os.FileMode(bit) != 0:
-			switch i % 3 {
-			case 0:
-				b.WriteByte('x')
-			case 1:
-				b.WriteByte('w')
-			case 2:
-				b.WriteByte('r')
-			}
-		default:
-			b.WriteByte('-')
-		}
-	}
-
-	return b.String()
-}
-
-func getFileType(info os.FileInfo) string {
-	mode := info.Mode()
-	if mode&os.ModeSymlink != 0 {
-		return "symlink"
-	}
-	if mode.IsDir() {
-		return "directory"
-	}
-	if mode.IsRegular() {
-		return "file"
-	}
-	if mode&os.ModeDevice != 0 {
-		return "block"
-	}
-	if mode&os.ModeCharDevice != 0 {
-		return "character"
-	}
-	if mode&os.ModeNamedPipe != 0 {
-		return "pipe"
-	}
-	if mode&os.ModeSocket != 0 {
-		return "socket"
-	}
-	return "unknown"
-}
-
-func formatSize(size int64) string {
-	const unit = 1024
-	if size < unit {
-		return fmt.Sprintf("%dB", size)
-	}
-	div, exp := int64(unit), 0
-	for n := size / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f%c", float64(size)/float64(div), "KMGTPE"[exp])
-}
-
 func outputResult(result *StatResult, cfg Config) error {
 	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+		if cfg.Compact {
+		return xmlout.WriteJSONCompact(os.Stdout, result)
+	}
+	return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
@@ -366,28 +303,6 @@ func getDev(sysInfo any) uint64 {
 	switch v := sysInfo.(type) {
 	case interface{ Dev() uint64 }:
 		return v.Dev()
-	default:
-		return 0
-	}
-}
-
-func getUID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Uid() uint32 }:
-		return v.Uid()
-	case interface{ UID() uint32 }:
-		return v.UID()
-	default:
-		return 0
-	}
-}
-
-func getGID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Gid() uint32 }:
-		return v.Gid()
-	case interface{ GID() uint32 }:
-		return v.GID()
 	default:
 		return 0
 	}

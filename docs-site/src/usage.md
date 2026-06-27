@@ -31,6 +31,15 @@ aict diff old.go new.go
 
 # Count lines, words, bytes
 aict wc main.go
+
+# Text processing
+aict sed main.go -e 's/foo/bar/g'
+aict awk main.go -f '{print $1}'
+aict jq data.json --path '.key'
+aict tar archive.tar.gz -t
+
+# Start MCP server (stdio transport)
+aict mcp
 ```
 
 ## Global Flags

@@ -11,7 +11,7 @@
 
 ## What is aict?
 
-`aict` is a single Go binary that reimplements ~22 Unix CLI tools (`ls`, `grep`, `cat`, `find`, `stat`, `diff`, etc.) with structured XML/JSON output designed for AI coding agents.
+`aict` is a single Go binary that reimplements 33 Unix CLI tools (`ls`, `grep`, `cat`, `find`, `stat`, `diff`, `sed`, `awk`, `jq`, `tar`, etc.) with structured XML/JSON output designed for AI coding agents.
 
 Every time an AI agent runs `ls`, `grep`, or `cat`, it wastes tokens parsing human-readable output. `aict` gives you the same tools you already know, but the output is structured. No parsing. No regex. Just data.
 
@@ -52,7 +52,7 @@ aict cat main.go
 | **Zero dependencies** | Go standard library only (MCP server excepted) |
 | **Single binary** | Drop it anywhere and it works |
 | **Enriched metadata** | Language detection, MIME types, epoch timestamps |
-| **MCP server** | Connect to Claude, Cursor, and other AI assistants |
+| **MCP server** | Built-in: `aict mcp` connects to Claude, Cursor, and other AI assistants |
 | **Cross-platform** | Linux, macOS, Windows (partial) |
 
 ## Navigate This Site
@@ -62,7 +62,7 @@ aict cat main.go
 | [Installation](./install.md) | Build from source, `go install`, Docker |
 | [Usage](./usage.md) | Commands, flags, environment variables |
 | [Output Modes](./output-modes.md) | XML, JSON, plain text explained |
-| [Tools Reference](./tools-reference.md) | Documentation for all 22+ tools |
+| [Tools Reference](./tools-reference.md) | Documentation for all 33 tools |
 | [MCP Server](./mcp-server.md) | Connect to Claude, Cursor, etc. |
 | [XML Schema Reference](./xml-schema.md) | Complete output schema for every tool |
 | [Migration Guide](./migration-guide.md) | GNU coreutils → aict mapping |

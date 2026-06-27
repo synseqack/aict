@@ -1,6 +1,6 @@
 # Tools Reference
 
-Complete reference for all `aict` commands. Each tool outputs structured XML/JSON by default, with optional plain text mode for compatibility.
+Complete reference for all 33 `aict` commands. Each tool outputs structured XML/JSON by default, with optional plain text mode for compatibility.
 
 ## Common Flags
 
@@ -12,6 +12,21 @@ Every tool supports these global output flags:
 | `--json` | JSON output |
 | `--plain` | Plain text output |
 | `--pretty` | Pretty-printed output |
+
+## awk
+
+Extract fields and apply pattern-action rules to file contents
+
+```bash
+aict awk [flags] [arguments...]
+```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--fieldsep` | string | Field separator (default: whitespace) |
+| `--program` | string | Awk program (e.g. `{print $1}`) |
 
 ## basename
 
@@ -34,6 +49,20 @@ aict cat [flags] [arguments...]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--linenumbers` | boolean | Show line numbers |
+
+## completions
+
+Generate shell completion scripts for aict
+
+```bash
+aict completions [flags] [arguments...]
+```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--shell` | string | Shell type: `bash`, `zsh`, or `fish` |
 
 ## checksums
 
@@ -179,7 +208,7 @@ aict find [flags] [arguments...]
 
 ## git
 
-Run git subcommands (status, diff, log, ls-files, blame)
+Run git subcommands (status, diff, log, ls-files, blame, show)
 
 ```bash
 aict git [flags] [arguments...]
@@ -228,6 +257,22 @@ aict head [flags] [arguments...]
 |------|------|-------------|
 | `--bytes` | integer | Number of bytes to show |
 | `--lines` | integer | Number of lines to show |
+
+## jq
+
+Extract values from JSON files using path expressions
+
+```bash
+aict jq [flags] [arguments...]
+```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--compact` | boolean | Compact output (no pretty-print) |
+| `--path` | string | Path expression (e.g. `.key`, `.[0]`, `.[].field`) |
+| `--raw` | boolean | Output raw strings without JSON quotes |
 
 ## ls
 
@@ -287,6 +332,24 @@ Print current working directory
 aict pwd [flags] [arguments...]
 ```
 
+## sed
+
+Apply sed-style transformations to file contents
+
+```bash
+aict sed [flags] [arguments...]
+```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--extendedregex` | boolean | Use extended regular expressions (`-E`) |
+| `--script` | string | Sed script to apply (e.g. `s/foo/bar/g`) |
+| `--suppress` | boolean | Suppress default output (`-n`) |
+
+Supported commands: `s` (substitute), `d` (delete), `p` (print), `q` (quit). Address forms: line number, `/regex/`, `N,M` range, `$` (last line).
+
 ## realpath
 
 Print resolved absolute paths
@@ -324,6 +387,21 @@ aict sha256sum [flags] [arguments...]
 |------|------|-------------|
 | `--algorithms` | string | Hash algorithm (md5, sha1, sha256) |
 | `--verify` | boolean | Verify checksums from file |
+
+## tar
+
+List or extract contents from tar archives (.tar, .tar.gz, .tgz, .tar.bz2)
+
+```bash
+aict tar [flags] [arguments...]
+```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--extract` | string | Extract a specific file path to stdout |
+| `--list` | boolean | List archive contents |
 
 ## sort
 

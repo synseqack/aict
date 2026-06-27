@@ -30,6 +30,10 @@ This guide maps common GNU coreutils commands to their `aict` equivalents.
 | `uname -a` | `aict system` | Combined with user/runtime info |
 | `ps aux` | `aict ps` | Adds state descriptions, exe paths |
 | `md5sum file.go` | `aict checksums file.go` | Returns MD5, SHA1, SHA256 at once |
+| `sed 's/foo/bar/g' file.txt` | `aict sed file.txt -e 's/foo/bar/g'` | Structured output with changed-line flags |
+| `awk '{print $1}' file.txt` | `aict awk file.txt -f '{print $1}'` | Field extraction with pattern-action support |
+| `jq '.key' file.json` | `aict jq file.json --path .key` | Supports `.key`, `.[N]`, `.[]`, `.[].field` |
+| `tar -tzf archive.tar.gz` | `aict tar archive.tar.gz -t` | Lists .tar, .tar.gz, .tgz, .tar.bz2 |
 
 ## Key Differences
 

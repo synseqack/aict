@@ -20,7 +20,7 @@ Pass `--json` any time you want JSON. The schema is identical.
 
 ## Does it work on Windows?
 
-Partially. `ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `checksums`, `realpath`, `basename`, `dirname`, `pwd`, `env` all work. `ps` and `df` are Linux/macOS only (they read `/proc` and use `syscall.Statfs`).
+Partially. `ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `sed`, `awk`, `jq`, `tar`, `checksums`, `realpath`, `basename`, `dirname`, `pwd`, `env` all work. `ps` and `df` are Linux/macOS only (they read `/proc` and use `syscall.Statfs`).
 
 ## Can I use it without `AICT_XML=1`?
 

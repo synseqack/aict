@@ -240,7 +240,7 @@ eza and lsd are better `ls` for humans — great colors and formatting. aict out
 
 **Does it work on Windows?**
 
-`ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `sed`, `awk`, `jq`, `tar`, `checksums`, and path utilities work on Windows. `ps`, `df`, and `system` are Linux/macOS only.
+`ls`, `cat`, `stat`, `wc`, `find`, `diff`, `grep`, `head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `sed`, `awk`, `jq`, `tar`, `checksums`, `df`, and path utilities work on Windows. `system` is Linux/macOS; `ps` is Linux-only (it reads `/proc`). Unsupported platforms get a structured `<error>` element, never a crash.
 
 **Is this safe to run in a sandboxed environment?**
 

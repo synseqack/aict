@@ -79,7 +79,7 @@ func TestPs_XMLValidity(t *testing.T) {
 }
 
 func TestPs_HasProcesses(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS != "linux" {
 		t.Skip("ps reads /proc, which is linux-only")
 	}
 	result, err := getProcesses(Config{})

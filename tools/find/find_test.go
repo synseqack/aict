@@ -162,3 +162,54 @@ func TestFind_XMLValidity(t *testing.T) {
 		t.Errorf("expected root element 'find', got %q", result.XMLName.Local)
 	}
 }
+
+func TestFind_NotBindsToNextPredicateOnly(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "a.go", "")
+	createFile(t, dir, "b.txt", "")
+	createFile(t, dir, "c.go", "")
+
+	// -not negates only -name "a.go"; -name "*.go" must still apply (GNU
+	// semantics). Expect exactly c.go — issue #30's repro returned the
+	// directory and b.txt instead.
+	result := runFind(t, []string{dir, "-not", "-name", "a.go", "-name", "*.go", "-type", "f"})
+
+	var names []string
+	for _, m := range result.Matches {
+		names = append(names, filepath.Base(m.Path))
+	}
+	if len(names) != 1 || names[0] != "c.go" {
+		t.Errorf("expected exactly [c.go], got %v", names)
+	}
+
+	// The negation must be visible in the echoed conditions.
+	foundNegated := false
+	for _, c := range result.Conditions {
+		if c.Type == "name" && c.Value == "a.go" && c.Negated == "true" {
+			foundNegated = true
+		}
+		if c.Type == "name" && c.Value == "*.go" && c.Negated == "true" {
+			t.Errorf("-not leaked onto the second -name predicate")
+		}
+	}
+	if !foundNegated {
+		t.Error("expected negated=\"true\" on the -not'd condition")
+	}
+}
+
+func TestFind_NotEachPredicate(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "a.go", "")
+	createFile(t, dir, "b.txt", "")
+
+	// Two independent negations: NOT dir AND NOT *.txt → only a.go.
+	result := runFind(t, []string{dir, "-not", "-type", "d", "-not", "-name", "*.txt"})
+
+	var names []string
+	for _, m := range result.Matches {
+		names = append(names, filepath.Base(m.Path))
+	}
+	if len(names) != 1 || names[0] != "a.go" {
+		t.Errorf("expected exactly [a.go], got %v", names)
+	}
+}

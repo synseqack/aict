@@ -35,7 +35,18 @@ type Config struct {
 	JSON     bool
 	Plain    bool
 	Pretty   bool
-	Compact bool
+	Compact  bool
+
+	// predicates preserves argument order and per-predicate negation
+	// (-not binds to the next predicate only, GNU find semantics).
+	predicates []predicate
+}
+
+type predicate struct {
+	kind   string // "name", "type", "mtime", "size"
+	strVal string
+	numVal int64
+	negate bool
 }
 
 type FindResult struct {
@@ -45,7 +56,7 @@ type FindResult struct {
 	Conditions   []FindCondition `xml:"condition"`
 	TotalMatches int             `xml:"total_matches,attr"`
 	Timestamp    int64           `xml:"timestamp,attr"`
-	Matches      []FindFile      `xml:"match"`
+	Matches      []FindFile      `xml:"file"`
 	Errors       []FindError     `xml:"error,omitempty"`
 }
 
@@ -55,6 +66,7 @@ type FindCondition struct {
 	XMLName xml.Name `xml:"condition"`
 	Type    string   `xml:"type,attr"`
 	Value   string   `xml:"value,attr"`
+	Negated string   `xml:"negated,attr,omitempty"`
 }
 
 type FindFile struct {
@@ -114,6 +126,13 @@ func Run(args []string) error {
 func parseFlags(args []string) (Config, string) {
 	var cfg Config
 	var positional []string
+	pendingNot := false
+
+	addPredicate := func(p predicate) {
+		p.negate = pendingNot
+		pendingNot = false
+		cfg.predicates = append(cfg.predicates, p)
+	}
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -121,17 +140,20 @@ func parseFlags(args []string) (Config, string) {
 		case "-name":
 			if i+1 < len(args) {
 				cfg.Name = args[i+1]
+				addPredicate(predicate{kind: "name", strVal: args[i+1]})
 				i++
 			}
 		case "-type":
 			if i+1 < len(args) {
 				cfg.Type = args[i+1]
+				addPredicate(predicate{kind: "type", strVal: args[i+1]})
 				i++
 			}
 		case "-mtime":
 			if i+1 < len(args) {
 				n, _ := strconv.Atoi(args[i+1])
 				cfg.MTime = n
+				addPredicate(predicate{kind: "mtime", numVal: int64(n)})
 				i++
 			}
 		case "-size":
@@ -140,6 +162,7 @@ func parseFlags(args []string) (Config, string) {
 				size, err := strconv.ParseInt(strings.TrimSuffix(sizeStr, "c"), 10, 64)
 				if err == nil {
 					cfg.Size = size
+					addPredicate(predicate{kind: "size", numVal: size})
 				}
 				i++
 			}
@@ -149,8 +172,8 @@ func parseFlags(args []string) (Config, string) {
 				cfg.MaxDepth = n
 				i++
 			}
-		case "-not":
-			cfg.Invert = true
+		case "-not", "!":
+			pendingNot = true
 		case "-o", "-or":
 			cfg.Or = true
 		case "--xml", "-xml":
@@ -189,23 +212,21 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *FindRe
 		Timestamp:  meta.Now(),
 	}
 
-	if cfg.Name != "" {
-		result.Conditions = append(result.Conditions, FindCondition{Type: "name", Value: cfg.Name})
-	}
-	if cfg.Type != "" {
-		result.Conditions = append(result.Conditions, FindCondition{Type: "type", Value: cfg.Type})
-	}
-	if cfg.MTime != 0 {
-		result.Conditions = append(result.Conditions, FindCondition{Type: "mtime", Value: strconv.Itoa(cfg.MTime)})
-	}
-	if cfg.Size != 0 {
-		result.Conditions = append(result.Conditions, FindCondition{Type: "size", Value: strconv.FormatInt(cfg.Size, 10)})
+	cfg.normalizePredicates()
+
+	for _, p := range cfg.predicates {
+		value := p.strVal
+		if p.kind == "mtime" || p.kind == "size" {
+			value = strconv.FormatInt(p.numVal, 10)
+		}
+		cond := FindCondition{Type: p.kind, Value: value}
+		if p.negate {
+			cond.Negated = "true"
+		}
+		result.Conditions = append(result.Conditions, cond)
 	}
 	if cfg.MaxDepth != 0 {
 		result.Conditions = append(result.Conditions, FindCondition{Type: "maxdepth", Value: strconv.Itoa(cfg.MaxDepth)})
-	}
-	if cfg.Invert {
-		result.Conditions = append(result.Conditions, FindCondition{Type: "invert", Value: "true"})
 	}
 
 	baseDepth := countPathParts(absPath)
@@ -267,75 +288,84 @@ func countPathParts(p string) int {
 	return count
 }
 
-func evaluateConditions(path string, info os.FileInfo, cfg Config, depth int) bool {
-	matches := true
-
+// normalizePredicates backfills the predicate list when Config was built
+// directly from exported fields (e.g. the MCP path) rather than parseFlags.
+// In that path the documented Invert flag negates each condition.
+func (cfg *Config) normalizePredicates() {
+	if len(cfg.predicates) > 0 {
+		return
+	}
 	if cfg.Name != "" {
-		name := filepath.Base(path)
-		matched, _ := filepath.Match(cfg.Name, name)
-		if cfg.Invert {
+		cfg.predicates = append(cfg.predicates, predicate{kind: "name", strVal: cfg.Name, negate: cfg.Invert})
+	}
+	if cfg.Type != "" {
+		cfg.predicates = append(cfg.predicates, predicate{kind: "type", strVal: cfg.Type, negate: cfg.Invert})
+	}
+	if cfg.MTime != 0 {
+		cfg.predicates = append(cfg.predicates, predicate{kind: "mtime", numVal: int64(cfg.MTime), negate: cfg.Invert})
+	}
+	if cfg.Size != 0 {
+		cfg.predicates = append(cfg.predicates, predicate{kind: "size", numVal: cfg.Size, negate: cfg.Invert})
+	}
+}
+
+func evaluateConditions(path string, info os.FileInfo, cfg Config, depth int) bool {
+	if len(cfg.predicates) == 0 {
+		return true
+	}
+
+	for _, p := range cfg.predicates {
+		matched := evalPredicate(p, path, info)
+		if p.negate {
 			matched = !matched
 		}
-		matches = matches && matched
+		if cfg.Or {
+			if matched {
+				return true
+			}
+		} else if !matched {
+			return false
+		}
 	}
+	return !cfg.Or
+}
 
-	if cfg.Type != "" {
-		typeMatch := false
-		switch cfg.Type {
+func evalPredicate(p predicate, path string, info os.FileInfo) bool {
+	switch p.kind {
+	case "name":
+		matched, _ := filepath.Match(p.strVal, filepath.Base(path))
+		return matched
+	case "type":
+		switch p.strVal {
 		case "f":
-			typeMatch = info.Mode().IsRegular()
+			return info.Mode().IsRegular()
 		case "d":
-			typeMatch = info.IsDir()
+			return info.IsDir()
 		case "l":
-			typeMatch = info.Mode()&os.ModeSymlink != 0
+			return info.Mode()&os.ModeSymlink != 0
 		case "b":
-			typeMatch = info.Mode()&os.ModeDevice != 0
+			return info.Mode()&os.ModeDevice != 0
 		case "c":
-			typeMatch = info.Mode()&os.ModeCharDevice != 0
+			return info.Mode()&os.ModeCharDevice != 0
 		case "p":
-			typeMatch = info.Mode()&os.ModeNamedPipe != 0
+			return info.Mode()&os.ModeNamedPipe != 0
 		case "s":
-			typeMatch = info.Mode()&os.ModeSocket != 0
+			return info.Mode()&os.ModeSocket != 0
 		}
-		if cfg.Invert {
-			typeMatch = !typeMatch
+		return false
+	case "mtime":
+		days := int64(time.Since(info.ModTime()).Hours() / 24)
+		if p.numVal < 0 {
+			return days < -p.numVal
 		}
-		matches = matches && typeMatch
+		return days > p.numVal
+	case "size":
+		if p.numVal < 0 {
+			return info.Size() < -p.numVal
+		}
+		return info.Size() > p.numVal
 	}
-
-	if cfg.MTime != 0 {
-		age := time.Since(info.ModTime())
-		days := int(age.Hours() / 24)
-		mtimeMatch := false
-		if cfg.MTime < 0 {
-			mtimeMatch = days < -cfg.MTime
-		} else if cfg.MTime > 0 {
-			mtimeMatch = days > cfg.MTime
-		}
-		if cfg.Invert {
-			mtimeMatch = !mtimeMatch
-		}
-		matches = matches && mtimeMatch
-	}
-
-	if cfg.Size != 0 {
-		sizeMatch := false
-		if cfg.Size < 0 {
-			sizeMatch = info.Size() < -cfg.Size
-		} else if cfg.Size > 0 {
-			sizeMatch = info.Size() > cfg.Size
-		}
-		if cfg.Invert {
-			sizeMatch = !sizeMatch
-		}
-		matches = matches && sizeMatch
-	}
-
-	if cfg.Or {
-		matches = matches || (cfg.Name == "" && cfg.Type == "" && cfg.MTime == 0 && cfg.Size == 0)
-	}
-
-	return matches
+	return false
 }
 
 func outputResult(result *FindResult, cfg Config) error {

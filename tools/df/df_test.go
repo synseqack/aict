@@ -12,7 +12,8 @@ var zeroSizeTypes = map[string]bool{
 	"sysfs": true, "proc": true, "devpts": true, "cgroup2": true, "pstore": true,
 	"debugfs": true, "tracefs": true, "mqueue": true, "hugetlbfs": true, "fusectl": true,
 	"configfs": true, "securityfs": true, "bpf": true, "autofs": true, "binfmt_misc": true,
-	"nsfs": true, "selinuxfs": true, "rpc_pipefs": true,
+	"nsfs": true, "selinuxfs": true, "rpc_pipefs": true, "efivarfs": true, "ramfs": true,
+	"devtmpfs": true, "squashfs": true,
 }
 
 func isZeroSizeType(fsType string) bool {

@@ -118,6 +118,43 @@ func TestCat_Missing(t *testing.T) {
 	}
 }
 
+func TestCat_XMLSpecialContent(t *testing.T) {
+	dir := t.TempDir()
+	content := "cdata terminator ]]> here\nmarkup <tag attr=\"v\"> & entities &amp;\n"
+	path := createFile(t, dir, "special.txt", content)
+
+	os.Setenv("AICT_XML", "1")
+	defer os.Unsetenv("AICT_XML")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	var outBuf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		outBuf.ReadFrom(r)
+		close(done)
+	}()
+
+	err := Run([]string{path})
+	w.Close()
+	os.Stdout = oldStdout
+	<-done
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result CatResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("XML with ]]> content must stay well-formed: %v\n%s", err, outBuf.String())
+	}
+	if result.Content != content {
+		t.Errorf("content did not round-trip: got %q, want %q", result.Content, content)
+	}
+}
+
 func TestCat_XMLValidity(t *testing.T) {
 	dir := t.TempDir()
 	path := createFile(t, dir, "test.txt", "hello\n")

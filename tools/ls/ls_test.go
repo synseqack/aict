@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -319,6 +320,9 @@ func TestLS_XMLValidity(t *testing.T) {
 }
 
 func TestLS_Permissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix permission bits not supported on windows")
+	}
 	dir := t.TempDir()
 
 	execPath := createFile(t, dir, "script.sh", "#!/bin/bash")

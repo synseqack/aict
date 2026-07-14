@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -137,6 +138,9 @@ func TestFile_Binary(t *testing.T) {
 }
 
 func TestFile_Executable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix permission bits not supported on windows")
+	}
 	dir := t.TempDir()
 	execPath := createFile(t, dir, "script.sh", "#!/bin/bash")
 	os.Chmod(execPath, 0755)

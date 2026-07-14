@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -78,6 +79,9 @@ func TestPs_XMLValidity(t *testing.T) {
 }
 
 func TestPs_HasProcesses(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ps reads /proc, which is linux-only")
+	}
 	result, err := getProcesses(Config{})
 	if err != nil {
 		t.Fatal(err)

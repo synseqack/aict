@@ -6,7 +6,7 @@ Thank you for your interest in contributing to aict.
 
 ```
 aict/
-├── cmd/aict/main.go       # Entry point
+├── main.go       # Entry point
 ├── cmd/mcp/               # MCP server implementation
 ├── internal/              # Shared packages
 │   ├── xml/               # Output encoding (XML/JSON/plain)

@@ -8,13 +8,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Cross-platform support documentation
-- CONTRIBUTING.md guide
-- GitHub Actions CI workflow
-- Docker build configuration
+- `aict version` / `--version` / `-V` command; release binaries embed the tag via ldflags
+- Token-cost benchmark (`cmd/tokenbench`, `benchmarks/TOKENS.md`, `make bench-tokens`) measuring context-window cost vs GNU coreutils
+- `doctor` now reports the aict version
 
 ### Changed
-- Improved test coverage for edge cases
+- Help output lists tools and flags in sorted, deterministic order
+- CI now runs the test suite on Linux, Windows, and macOS, and on every push to master
+- Documented dependency policy accurately: tools/internal are stdlib-only; the MCP SDK (used only by `aict mcp`) is the sole external dependency
+
+### Fixed
+- Test suite passes on Windows (unix-permission and `/proc`-dependent tests are now skipped there)
+- `env` redacts secret variable values in XML/JSON output
+
+### Removed
+- Scheduled issue-creator workflow
+
+## [2.0.1] - 2026-06-27
+
+### Changed
+- docs-site updated for v2.0 (33 tools, `aict mcp`, new tools)
+
+## [2.0.0] - 2026-06-27
+
+### Added
+- 5 new tools: `sed`, `awk`, `jq`, `tar`, `completions`
+- `git` tool (status, diff, log, ls-files, blame) and `doctor` self-diagnostic
+- Benchmark suite (`cmd/bench`, `make bench`) comparing aict against GNU coreutils
+- `--workers` flag for parallel grep worker count
+
+### Changed
+- MCP server consolidated into the main binary as `aict mcp` (separate `aict-mcp` binary removed)
+
+### Fixed
+- `df` on Windows: enumerate drives via `GetLogicalDrives` instead of `/proc/mounts`
+
+## [1.0.3] - 2026-04-06
+
+### Fixed
+- Migration and integration guides
+
+## [1.0.2] - 2026-04-06
+
+### Changed
+- Consolidated tool documentation into a single generated file
+
+## [1.0.1] - 2026-04-06
+
+### Added
+- MCP tool annotations, privacy policy, and usage examples
+- Homebrew formula for macOS installation
+- CONTRIBUTING.md guide, issue and PR templates
+- GitHub Actions CI workflow
+- Docker build configuration
 
 ## [1.0.0] - 2026-04-06
 
@@ -55,5 +101,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Language detection
 - MIME type detection
 
-[Unreleased]: https://github.com/synseqack/aict/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/synseqack/aict/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/synseqack/aict/compare/v2.0...v2.0.1
+[2.0.0]: https://github.com/synseqack/aict/compare/v1.0.3...v2.0
+[1.0.3]: https://github.com/synseqack/aict/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/synseqack/aict/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/synseqack/aict/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/synseqack/aict/releases/tag/v1.0.0

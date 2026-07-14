@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-14
+
 ### Added
 - `aict version` / `--version` / `-V` command; release binaries embed the tag via ldflags
 - Token-cost benchmark (`cmd/tokenbench`, `benchmarks/TOKENS.md`, `make bench-tokens`) measuring context-window cost vs GNU coreutils
+- Terminal demo GIF in the README (`public/demo.gif`, generated from real captures)
 - `doctor` now reports the aict version
+- `find`: echoed `<condition>` elements carry `negated="true"` when inverted; `!` accepted as an alias for `-not`
 
 ### Changed
 - Help output lists tools and flags in sorted, deterministic order
 - CI now runs the test suite on Linux, Windows, and macOS, and on every push to master
 - Documented dependency policy accurately: tools/internal are stdlib-only; the MCP SDK (used only by `aict mcp`) is the sole external dependency
+- Documented the real platform matrix: `df` works on Linux/macOS/Windows; `ps` is Linux-only
 
 ### Fixed
+- `ls`/`stat` reported `owner="root"` for every file on Linux and macOS (uid/gid extraction never matched `*syscall.Stat_t`)
+- `df` returned zero filesystems on macOS (read `/proc/mounts`); now uses `Getfsstat` (#11 follow-up)
+- `diff`: hunk `old_count`/`new_count` were always 0, and the Myers backtracking could emit unchanged lines as added+removed pairs (#32)
+- `find`: `-not` inverted the entire expression instead of only the next predicate (#30)
 - Test suite passes on Windows (unix-permission and `/proc`-dependent tests are now skipped there)
 - `env` redacts secret variable values in XML/JSON output
 
@@ -101,7 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Language detection
 - MIME type detection
 
-[Unreleased]: https://github.com/synseqack/aict/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/synseqack/aict/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/synseqack/aict/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/synseqack/aict/compare/v2.0...v2.0.1
 [2.0.0]: https://github.com/synseqack/aict/compare/v1.0.3...v2.0
 [1.0.3]: https://github.com/synseqack/aict/compare/v1.0.2...v1.0.3

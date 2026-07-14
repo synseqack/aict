@@ -72,30 +72,6 @@ func FileType(info os.FileInfo) string {
 	return "unknown"
 }
 
-// UID extracts the numeric UID from a syscall.Stat_t or equivalent via interface dispatch.
-func UID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Uid() uint32 }:
-		return v.Uid()
-	case interface{ UID() uint32 }:
-		return v.UID()
-	default:
-		return 0
-	}
-}
-
-// GID extracts the numeric GID from a syscall.Stat_t or equivalent via interface dispatch.
-func GID(sysInfo any) uint32 {
-	switch v := sysInfo.(type) {
-	case interface{ Gid() uint32 }:
-		return v.Gid()
-	case interface{ GID() uint32 }:
-		return v.GID()
-	default:
-		return 0
-	}
-}
-
 // IsSymlink reports whether the FileMode indicates a symlink.
 func IsSymlink(mode fs.FileMode) bool {
 	return mode&fs.ModeSymlink != 0

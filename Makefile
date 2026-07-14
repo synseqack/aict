@@ -1,4 +1,4 @@
-.PHONY: build bench bench-compare bench-go bench-profile test clean
+.PHONY: build bench bench-compare bench-go bench-profile bench-tokens test clean
 
 # ── build ──────────────────────────────────────────────────────────────────────
 
@@ -21,6 +21,12 @@ bench-baseline: build
 
 bench-compare: build
 	go run ./cmd/bench -runs 7 -compare benchmarks/baseline.xml
+
+# ── token benchmarks (context-window cost vs GNU tools) ──────────────────────
+
+bench-tokens: build
+	go run ./cmd/tokenbench -aict ./aict -samples benchmarks/token-samples
+	@echo "Real tokenizer counts: python benchmarks/count_tokens.py benchmarks/token-samples"
 
 # ── Go testing.B benchmarks (internal, no subprocess) ────────────────────────
 

@@ -2,6 +2,9 @@
 
 This directory contains the benchmark suite for aict.
 
+Speed benchmarks are below; for the context-window cost benchmark (tokens per
+task vs GNU coreutils) see [TOKENS.md](TOKENS.md) and run `make bench-tokens`.
+
 ## Quick start
 
 ```bash

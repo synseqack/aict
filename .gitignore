@@ -33,6 +33,9 @@ Thumbs.db
 dist/
 build/
 
+# Generated token-benchmark captures (regenerate with make bench-tokens)
+benchmarks/token-samples/
+
 # mdBook output
 docs-site/book/
 docs-site/src/tools-reference.md

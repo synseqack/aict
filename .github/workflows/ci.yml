@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main, master]
     tags:
       - 'v*'
   pull_request:
@@ -9,7 +10,12 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,7 +25,7 @@ jobs:
           go-version: '1.25'
 
       - name: Build
-        run: go build -o aict ./main.go
+        run: go build -o aict .
 
       - name: Test
         run: go test ./...
@@ -27,12 +33,13 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-  test-cross-platform:
+  cross-compile:
+    # arm64 targets we can't run tests on; amd64 is covered by the test matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
+        goarch: [arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +57,7 @@ jobs:
           if [ "$GOOS" = "windows" ]; then
             ext=".exe"
           fi
-          go build -o aict${ext} ./main.go
+          go build -o aict${ext} .
 
   test-linux:
     runs-on: ubuntu-latest
@@ -63,10 +70,11 @@ jobs:
           go-version: '1.25'
 
       - name: Build aict
-        run: go build -o aict ./main.go
+        run: go build -o aict .
 
       - name: Test binary
         run: |
+          ./aict --version
           ./aict --help
           ./aict ls .
           ./aict cat README.md
@@ -93,7 +101,8 @@ jobs:
       - name: Build releases
         run: |
           mkdir -p releases
-          
+          TAG=${{ steps.get_tag.outputs.TAG }}
+
           # Build aict for all platforms
           for os in linux darwin windows; do
             for arch in amd64 arm64; do
@@ -101,11 +110,12 @@ jobs:
               if [ "$os" = "windows" ]; then
                 ext=".exe"
               fi
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-${os}-${arch}${ext} ./main.go
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build \
+                -ldflags "-s -w -X github.com/synseqack/aict/internal/version.Version=${TAG}" \
+                -o aict-${os}-${arch}${ext} .
               cp aict-${os}-${arch}${ext} releases/
             done
           done
-          
 
       - name: Create platform tarballs
         run: |
@@ -142,10 +152,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build and upload latest artifacts on every push to main
+  # Build and upload latest artifacts on every push to the default branch
   artifacts:
     needs: [test, test-linux]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -158,7 +168,7 @@ jobs:
       - name: Build releases
         run: |
           mkdir -p releases
-          
+
           # Build aict for all platforms
           for os in linux darwin windows; do
             for arch in amd64 arm64; do
@@ -166,11 +176,12 @@ jobs:
               if [ "$os" = "windows" ]; then
                 ext=".exe"
               fi
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o aict-${os}-${arch}${ext} ./main.go
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build \
+                -ldflags "-s -w -X github.com/synseqack/aict/internal/version.Version=${GITHUB_SHA::7}" \
+                -o aict-${os}-${arch}${ext} .
               cp aict-${os}-${arch}${ext} releases/
             done
           done
-          
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -12,6 +12,7 @@ import (
 
 	"github.com/synseqack/aict/internal/meta"
 	"github.com/synseqack/aict/internal/tool"
+	"github.com/synseqack/aict/internal/version"
 	xmlout "github.com/synseqack/aict/internal/xml"
 )
 
@@ -31,6 +32,7 @@ type Config struct {
 type DoctorResult struct {
 	XMLName   xml.Name      `xml:"doctor"`
 	Timestamp int64         `xml:"timestamp,attr"`
+	Version   string        `xml:"version,attr"`
 	OS        string        `xml:"os,attr"`
 	Arch      string        `xml:"arch,attr"`
 	GoVersion string        `xml:"go_version,attr"`
@@ -93,6 +95,7 @@ func parseFlags(args []string) (Config, []string) {
 func runDiagnostics() *DoctorResult {
 	result := &DoctorResult{
 		Timestamp: meta.Now(),
+		Version:   version.Version,
 		OS:        runtime.GOOS,
 		Arch:      runtime.GOARCH,
 		GoVersion: runtime.Version(),
@@ -234,6 +237,7 @@ func outputResult(result *DoctorResult, cfg Config) error {
 func writePlain(w io.Writer, result *DoctorResult) error {
 	fmt.Fprintf(w, "aict doctor - Diagnostic Report\n")
 	fmt.Fprintf(w, "================================\n")
+	fmt.Fprintf(w, "Version: %s\n", result.Version)
 	fmt.Fprintf(w, "OS: %s\n", result.OS)
 	fmt.Fprintf(w, "Arch: %s\n", result.Arch)
 	fmt.Fprintf(w, "Go: %s\n", result.GoVersion)

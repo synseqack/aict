@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"sort"
 
 	mcpserver "github.com/synseqack/aict/cmd/mcp"
 	"github.com/synseqack/aict/internal/tool"
+	"github.com/synseqack/aict/internal/version"
 	_ "github.com/synseqack/aict/tools/basename"
 	_ "github.com/synseqack/aict/tools/cat"
 	_ "github.com/synseqack/aict/tools/checksums"
@@ -56,6 +59,11 @@ func run(args []string) error {
 	toolName := args[0]
 	subArgs := args[1:]
 
+	if toolName == "version" || toolName == "--version" || toolName == "-V" {
+		fmt.Printf("aict %s (%s/%s, %s)\n", version.Version, runtime.GOOS, runtime.GOARCH, runtime.Version())
+		return nil
+	}
+
 	if toolName == "help" || toolName == "--help" || toolName == "-h" {
 		if len(subArgs) > 0 {
 			printToolHelp(subArgs[0])
@@ -97,9 +105,15 @@ func printToolHelp(name string) {
 		return
 	}
 
+	flags := make([]string, 0, len(props))
+	for flag := range props {
+		flags = append(flags, flag)
+	}
+	sort.Strings(flags)
+
 	fmt.Println("Flags:")
-	for flag, raw := range props {
-		info, _ := raw.(map[string]interface{})
+	for _, flag := range flags {
+		info, _ := props[flag].(map[string]interface{})
 		desc, _ := info["description"].(string)
 		typ, _ := info["type"].(string)
 		if typ == "" {
@@ -113,14 +127,20 @@ func printUsage() {
 	meta := tool.AllMeta()
 	tools := tool.All()
 
-	fmt.Print(`aict - Your command line, built for AI
-
+	fmt.Printf("aict %s - Your command line, built for AI\n", version.Version)
+	fmt.Print(`
 Usage: aict <command> [flags] [arguments]
 
 Commands:
 `)
 
+	names := make([]string, 0, len(tools))
 	for name := range tools {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
 		if m, ok := meta[name]; ok {
 			fmt.Printf("  %-12s %s\n", name, m.Description)
 		} else {
@@ -129,6 +149,7 @@ Commands:
 	}
 
 	fmt.Printf("  %-12s %s\n", "mcp", "Start MCP server (stdio transport)")
+	fmt.Printf("  %-12s %s\n", "version", "Print version information")
 
 	fmt.Print(`
 Output modes:

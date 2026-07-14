@@ -197,7 +197,9 @@ Honest numbers first: **aict output costs 1.1–7.8× more tokens per task than 
 
 Every extra plaintext call is a full agent turn — model inference, tool-call overhead, and intermediate output all land in the context window anyway, none of which the token counts above include. And in this very benchmark, `file(1)` misidentified a Go source file as "C source"; aict labeled it `go`.
 
-Use `--plain` when you only need raw content. See [`benchmarks/TOKENS.md`](benchmarks/TOKENS.md) for methodology; reproduce with `go run ./cmd/tokenbench`.
+In a live agent eval (opencode, same task 3× per toolchain), the aict-equipped agent generated **~46% fewer output tokens** (median 265 vs 487) and was correct 3/3 — the GNU-equipped agent shipped a flawed report in the run where it trusted `file(1)`'s language detection. See [`benchmarks/TOKENS.md`](benchmarks/TOKENS.md) for both methodologies; reproduce with `go run ./cmd/tokenbench`.
+
+Use `--plain` when you only need raw content.
 
 ---
 

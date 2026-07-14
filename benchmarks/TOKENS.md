@@ -53,6 +53,47 @@ which multiplies the real cost of the multi-call GNU sequences.
 - `--json` is slightly more expensive than `--xml` for the same data
   (punctuation-heavy); `--plain` matches classic tool output.
 
+## Live agent eval (opencode)
+
+The transcript numbers above measure output size. What matters end-to-end is
+what a real agent *does* with each toolchain. We gave
+[opencode](https://github.com/sst/opencode) 1.17.18 (model
+`opencode/big-pickle`) the same task three times per condition over the
+fixture tree: *"report every file under src/ with size, language, and TODO
+lines — reply as a markdown table."* One condition allowed only standard
+shell tools; the other only `aict`.
+
+| Metric (3 runs each) | GNU tools | aict |
+|----------------------|-----------|------|
+| Output tokens (median) | 487 | **265** |
+| Model steps | 3–4 | 2–3 |
+| Fully correct answers | 2/3 | **3/3** |
+
+Token counts from opencode's `step_finish` events (`--format json`).
+Observations from the transcripts:
+
+- The GNU run that trusted `file(1)` for languages got `server.go`
+  misidentified as "C source" and shipped a report with a flawed language
+  column plus a correction footnote.
+- The GNU runs that stayed correct did so by *avoiding* `file(1)` — writing
+  multi-line shell loops (`while read f; do size=$(stat -c%s "$f") ...`) and
+  inferring languages from extensions themselves. The model can compensate on
+  a 5-file fixture; that's reasoning budget spent on plumbing.
+- The aict runs each answered from two data calls (`aict find --xml`,
+  `aict grep --xml`) — size and language arrive as attributes, nothing to
+  infer, and generated roughly half the output tokens.
+
+Reproduce (any agent CLI that reports usage works):
+
+```sh
+opencode run --format json -m opencode/big-pickle \
+  "Report every file under src/ (recursive): filename, size in bytes, \
+   language, and TODO lines. Use ONLY <toolchain>. Reply as a markdown table."
+```
+
+Input-token comparisons across runs are confounded by provider prompt
+caching; output tokens and correctness are the stable metrics reported here.
+
 ## Methodology
 
 Each task is a realistic agent question. The GNU side executes the full

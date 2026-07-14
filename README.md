@@ -13,6 +13,8 @@
 
 [Install](#install) · [Quick start](#quick-start) · [All tools](#tools) · [MCP server](#mcp-server) · [Claude Code](#claude-code-integration) · [Token cost](#token-cost) · [Benchmarks](#benchmarks) · [Contributing](CONTRIBUTING.md)
 
+<img src="./public/demo.gif" alt="aict demo: classic ls output vs structured aict output" width="760"/>
+
 </div>
 
 ---

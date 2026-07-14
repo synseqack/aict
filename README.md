@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/synseqack/aict?style=flat-square)](https://github.com/synseqack/aict/stargazers)
 
-[Install](#install) · [Quick start](#quick-start) · [All tools](#tools) · [MCP server](#mcp-server) · [Claude Code](#claude-code-integration) · [Benchmarks](#benchmarks) · [Contributing](CONTRIBUTING.md)
+[Install](#install) · [Quick start](#quick-start) · [All tools](#tools) · [MCP server](#mcp-server) · [Claude Code](#claude-code-integration) · [Token cost](#token-cost) · [Benchmarks](#benchmarks) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -181,6 +181,24 @@ Once connected, Claude Code can call `ls`, `grep`, `diff`, and all other tools a
 
 ---
 
+## Token cost
+
+Honest numbers first: **aict output costs 1.1–7.8× more tokens per task than terse GNU output** (measured with tiktoken `o200k_base`). What those tokens buy: fewer round-trips and zero parsing ambiguity. Where plaintext needs 2–4 chained calls (`ls` then `file` for languages, `find` then `stat` per hit), aict answers in one.
+
+| Task | GNU | aict | Tokens (GNU → aict) |
+|------|-----|------|---------------------|
+| List dir with size/type/language | 2 calls | 1 call | 246 → 820 · 3.3× |
+| Read file + line count + type | 3 calls | 1 call | 173 → 274 · 1.6× |
+| Find `.go` files with size/mtime | 4 calls | 1 call | 47 → 367 · 7.8× |
+| Grep with file/line/context | 1 call | 1 call | 141 → 326 · 2.3× |
+| Diff with change types | 1 call | 1 call | 167 → 192 · 1.2× |
+
+Every extra plaintext call is a full agent turn — model inference, tool-call overhead, and intermediate output all land in the context window anyway, none of which the token counts above include. And in this very benchmark, `file(1)` misidentified a Go source file as "C source"; aict labeled it `go`.
+
+Use `--plain` when you only need raw content. See [`benchmarks/TOKENS.md`](benchmarks/TOKENS.md) for methodology; reproduce with `go run ./cmd/tokenbench`.
+
+---
+
 ## Benchmarks
 
 aict trades some speed for semantic richness (language detection, MIME typing, absolute paths). The overhead is intentional. Startup cost is ~3.6 ms per invocation.
@@ -227,6 +245,10 @@ eza and lsd are better `ls` for humans — great colors and formatting. aict out
 **Is this safe to run in a sandboxed environment?**
 
 Yes. aict is strictly read-only. No network requests (MIME detection uses the Go stdlib, not HTTP). No telemetry. No data collection. It only reads paths you explicitly pass to it.
+
+**How many dependencies does it have?**
+
+One: the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk), used only by the `aict mcp` subcommand. All 33 tools and every internal package are pure Go standard library — enforced as a hard constraint in [AGENTS.md](AGENTS.md).
 
 ---
 

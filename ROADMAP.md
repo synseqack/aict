@@ -1,7 +1,7 @@
 # AI-Coreutils Implementation Roadmap
 
 > Phased delivery plan for building `aict` — structured CLI tools for AI coding agents.
-> Written in Go, zero non-stdlib dependencies, XML-first output.
+> Written in Go, stdlib-only tools (sole external dependency: the official MCP SDK in `cmd/mcp`), XML-first output.
 
 ---
 
@@ -14,7 +14,7 @@
 - [x] Initialize Go module: `go mod init github.com/synseqack/aict`
 - [x] Create directory structure per spec:
   ```
-  cmd/aict/main.go
+  main.go
   internal/xml/encoder.go
   internal/detect/language.go
   internal/detect/mime.go
@@ -42,7 +42,7 @@
   - Bytes → IEC human-readable (KiB, MiB, GiB)
 - [x] Implement `internal/meta/timestamp.go`:
   - `time.Now().Unix()` + `ago_s` helper
-- [x] Implement `cmd/aict/main.go`:
+- [x] Implement `main.go`:
   - Subcommand dispatch (`ls`, `cat`, `grep`, etc.)
   - Global flag parsing (`--xml`, `--json`, `--pretty`, `--plain`)
   - Env var `AICT_XML` check
@@ -58,7 +58,7 @@
   - Edge cases: empty dirs, symlinks, hidden files, binary files
 - [x] `go test ./...` passes
 - [x] `go vet ./...` clean
-- [x] `go build -o aict ./cmd/aict` produces working binary
+- [x] `go build -o aict .` produces working binary
 
 ### Acceptance Criteria
 

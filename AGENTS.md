@@ -7,12 +7,12 @@
 
 ## Project Overview
 
-**What**: Single Go binary (`aict`) reimplementing ~22 Unix CLI tools that AI coding agents actually call, outputting structured XML instead of plaintext.
+**What**: Single Go binary (`aict`) reimplementing 33 Unix CLI tools that AI coding agents actually call, outputting structured XML instead of plaintext.
 
-**Why**: AI agents waste tokens parsing human-readable `ls`, `grep`, `cat` output. XML output carries 3× semantic density with zero ambiguity.
+**Why**: Human-readable `ls`, `grep`, `cat` output forces agents to parse column positions and chain follow-up calls (`file`, `stat`) for metadata. aict answers in one call with zero parsing ambiguity — it spends more output tokens per call, but fewer agent turns per task (measured: see `benchmarks/TOKENS.md`).
 
 **Constraints**:
-- Go only, zero non-stdlib dependencies
+- Go only; all tools and internal packages are stdlib-only. The single permitted external dependency is the official MCP Go SDK, used exclusively in `cmd/mcp`
 - Single binary, subcommand model: `aict ls src/`
 - Three output modes: XML (default for AI), JSON, plain text (compatibility)
 - All paths absolute in output
@@ -50,14 +50,21 @@ Each tool must pass all tests before moving to the next.
 
 ```
 aict/
-├── cmd/aict/main.go              # Subcommand dispatch, global flags
+├── main.go                       # Subcommand dispatch, global flags
+├── cmd/
+│   ├── mcp/                      # MCP server (aict mcp subcommand)
+│   ├── bench/                    # Speed benchmark harness vs GNU tools
+│   ├── tokenbench/               # Token-cost benchmark harness
+│   └── gendocs/                  # Docs generation
 ├── internal/
 │   ├── xml/encoder.go            # Shared XML/JSON/plain output
 │   ├── detect/language.go        # Extension → language map
 │   ├── detect/mime.go            # Magic bytes MIME detection
 │   ├── path/resolve.go           # Absolute path resolution
 │   ├── format/size.go            # Bytes → human-readable
-│   └── meta/timestamp.go         # Unix time + ago_s helpers
+│   ├── meta/timestamp.go         # Unix time + ago_s helpers
+│   ├── tool/                     # Tool registry + schema generation
+│   └── version/                  # Build version (ldflags-injected)
 └── tools/
     ├── ls/ls.go
     ├── cat/cat.go
@@ -220,16 +227,18 @@ func TestToolName_EdgeCases(t *testing.T) {
 - `time`, `sort`, `slices`, `unicode`, `unicode/utf8`
 - `flag`
 
-**FORBIDDEN** — no external dependencies:
-- No `github.com/...` imports
-- No `go get` for third-party packages
+**ALLOWED (MCP server only)** — `cmd/mcp` may import the official MCP Go SDK (`github.com/modelcontextprotocol/go-sdk`). Nothing under `tools/` or `internal/` may import it.
+
+**FORBIDDEN** — no other external dependencies:
+- No third-party imports in `tools/` or `internal/` — stdlib only, no exceptions
+- No new `go get` dependencies anywhere without explicit approval
 - No cgo unless explicitly approved (Tree-sitter in Phase 4 only)
 
 ### 9. Build & Test Commands
 
 ```bash
 # Build
-go build -o aict ./cmd/aict
+go build -o aict .
 
 # Test all
 go test ./...
@@ -266,7 +275,7 @@ perf(grep): use buffered I/O for large file scanning
 ### 11. What NOT to Do
 
 - **Do NOT** implement Tier 3 tools (`cp`, `mv`, `rm`, `mkdir`, etc.) — they're write operations, out of scope
-- **Do NOT** add external dependencies — zero non-stdlib is a hard constraint
+- **Do NOT** add external dependencies — stdlib-only in `tools/` and `internal/` is a hard constraint (the MCP SDK in `cmd/mcp` is the sole exception)
 - **Do NOT** output to stderr — all errors are structured XML in stdout
 - **Do NOT** use relative paths in output — always absolute
 - **Do NOT** use locale-dependent strings — epoch integers and bytes only
@@ -282,7 +291,7 @@ Before marking any tool as complete:
 
 ```bash
 # 1. Builds without errors
-go build -o aict ./cmd/aict
+go build -o aict .
 
 # 2. All tests pass
 go test ./tools/toolname/

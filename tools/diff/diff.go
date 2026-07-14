@@ -313,6 +313,7 @@ func computeDiff(oldLines, newLines []string, oldName, newName string, cfg Confi
 
 		if e.kind == deleted {
 			removed++
+			current.OldCount++
 			current.Lines = append(current.Lines, DiffLine{
 				Type:    "removed",
 				Number:  oldIdx + 1,
@@ -321,6 +322,7 @@ func computeDiff(oldLines, newLines []string, oldName, newName string, cfg Confi
 			oldIdx++
 		} else if e.kind == inserted {
 			added++
+			current.NewCount++
 			current.Lines = append(current.Lines, DiffLine{
 				Type:    "added",
 				Number:  newIdx + 1,
@@ -384,7 +386,7 @@ func computeLCS(a, b []string) []lcsEdit {
 	trace := make([][]int, 0, max+1)
 
 	found := false
-	var endD, endK int
+	var endD int
 
 outer:
 	for d := 0; d <= max; d++ {
@@ -407,7 +409,6 @@ outer:
 			v[k+max] = x
 			if x >= N && y >= M {
 				endD = d
-				endK = k
 				found = true
 				break outer
 			}
@@ -426,65 +427,45 @@ outer:
 		return edits
 	}
 
-	// Backtrack through trace to reconstruct the edit path.
-	type move struct{ x, y, px, py int }
-	var path []move
-
-	k := endK
-	for d := endD; d > 0; d-- {
-		prev := trace[d-1]
+	// Backtrack from (N, M) to (0, 0). trace[d] holds the v-state from
+	// before round d, i.e. the frontier the round-d move originated from.
+	var rev []lcsEdit
+	x, y := N, M
+	for d := endD; d >= 0 && (x > 0 || y > 0); d-- {
+		V := trace[d]
+		k := x - y
 		var pk int
-		if k == -d || (k != d && prev[k-1+max] < prev[k+1+max]) {
+		if k == -d || (k != d && V[k-1+max] < V[k+1+max]) {
 			pk = k + 1
 		} else {
 			pk = k - 1
 		}
-		px := prev[pk+max]
+		px := V[pk+max]
 		py := px - pk
-		x := trace[d][k+max]
-		y := x - k
-		path = append(path, move{x, y, px, py})
-		k = pk
-	}
 
-	// path is in reverse; read it forward to emit edits.
-	var edits []lcsEdit
-	x, y := 0, 0
-	for i := len(path) - 1; i >= 0; i-- {
-		m := path[i]
-		// Emit snake (equal) segments from current (x,y) to (m.px,m.py)
-		for x < m.px && y < m.py {
-			edits = append(edits, lcsEdit{kind: equal, oldIndex: x, newIndex: y})
-			x++
-			y++
+		// Walk the snake (equal run) backwards to the move endpoint.
+		for x > px && y > py {
+			rev = append(rev, lcsEdit{kind: equal, oldIndex: x - 1, newIndex: y - 1})
+			x--
+			y--
 		}
-		// Emit the single non-diagonal move
-		if m.x > m.px && m.y == m.py {
-			// delete from a
-			edits = append(edits, lcsEdit{kind: deleted, oldIndex: x, newIndex: y})
-			x++
-		} else if m.y > m.py && m.x == m.px {
-			// insert from b
-			edits = append(edits, lcsEdit{kind: inserted, oldIndex: x, newIndex: y})
-			y++
+		if d > 0 {
+			if x == px {
+				// Downward move: b[y-1] was inserted.
+				rev = append(rev, lcsEdit{kind: inserted, oldIndex: x, newIndex: y - 1})
+				y--
+			} else {
+				// Rightward move: a[x-1] was deleted.
+				rev = append(rev, lcsEdit{kind: deleted, oldIndex: x - 1, newIndex: y})
+				x--
+			}
 		}
 	}
-	// Emit remaining snake after last move
-	for x < N && y < M {
-		edits = append(edits, lcsEdit{kind: equal, oldIndex: x, newIndex: y})
-		x++
-		y++
-	}
-	// Emit any remaining deletes/inserts
-	for x < N {
-		edits = append(edits, lcsEdit{kind: deleted, oldIndex: x, newIndex: y})
-		x++
-	}
-	for y < M {
-		edits = append(edits, lcsEdit{kind: inserted, oldIndex: x, newIndex: y})
-		y++
-	}
 
+	edits := make([]lcsEdit, len(rev))
+	for i, e := range rev {
+		edits[len(rev)-1-i] = e
+	}
 	return edits
 }
 
@@ -583,9 +564,7 @@ func writePlain(w io.Writer, result *DiffResult, cfg Config) error {
 	}
 
 	for _, hunk := range result.Hunks {
-		oldCount := countDiffLines(hunk.Lines, "removed")
-		newCount := countDiffLines(hunk.Lines, "added")
-		fmt.Fprintf(w, "@@ -%d,%d +%d,%d @@\n", hunk.OldStart, oldCount, hunk.NewStart, newCount)
+		fmt.Fprintf(w, "@@ -%d,%d +%d,%d @@\n", hunk.OldStart, hunk.OldCount, hunk.NewStart, hunk.NewCount)
 		for _, line := range hunk.Lines {
 			switch line.Type {
 			case "removed":
@@ -597,14 +576,4 @@ func writePlain(w io.Writer, result *DiffResult, cfg Config) error {
 	}
 
 	return nil
-}
-
-func countDiffLines(lines []DiffLine, target string) int {
-	count := 0
-	for _, l := range lines {
-		if l.Type == target {
-			count++
-		}
-	}
-	return count
 }

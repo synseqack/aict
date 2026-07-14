@@ -143,3 +143,90 @@ func TestDiff_XMLValidity(t *testing.T) {
 		t.Errorf("expected root element 'diff', got %q", result.XMLName.Local)
 	}
 }
+
+// applyEdits reconstructs the new file from oldLines and the edit script.
+// Any corruption in the Myers backtracking shows up as a mismatch here.
+func applyEdits(t *testing.T, oldLines, newLines []string) {
+	t.Helper()
+	edits := computeLCS(oldLines, newLines)
+	var got []string
+	oldIdx := 0
+	for _, e := range edits {
+		switch e.kind {
+		case equal:
+			if oldIdx >= len(oldLines) {
+				t.Fatalf("equal edit past end of old input (oldIdx=%d)", oldIdx)
+			}
+			got = append(got, oldLines[oldIdx])
+			oldIdx++
+		case deleted:
+			oldIdx++
+		case inserted:
+			if e.newIndex >= len(newLines) {
+				t.Fatalf("insert edit past end of new input (newIndex=%d)", e.newIndex)
+			}
+			got = append(got, newLines[e.newIndex])
+		}
+	}
+	if oldIdx != len(oldLines) {
+		t.Errorf("edit script consumed %d of %d old lines", oldIdx, len(oldLines))
+	}
+	if !slicesEqual(got, newLines) {
+		t.Errorf("edit script does not reconstruct new file:\n got: %q\nwant: %q", got, newLines)
+	}
+}
+
+func TestDiff_EditScriptReconstruction(t *testing.T) {
+	cases := []struct {
+		name     string
+		old, new []string
+	}{
+		{"issue32_repro", []string{"a", "b", "c", "d"}, []string{"a", "X", "c", "d", "e"}},
+		{"change_middle", []string{"1", "2", "3"}, []string{"1", "two", "3"}},
+		{"prepend", []string{"x", "y"}, []string{"new", "x", "y"}},
+		{"append", []string{"x", "y"}, []string{"x", "y", "z"}},
+		{"delete_all", []string{"a", "b"}, nil},
+		{"insert_all", nil, []string{"a", "b"}},
+		{"disjoint", []string{"a", "b", "c"}, []string{"x", "y"}},
+		{"interleaved", []string{"a", "b", "c", "d", "e"}, []string{"b", "x", "d", "y", "e"}},
+		{"repeated_lines", []string{"a", "a", "b", "a"}, []string{"a", "b", "a", "a"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			applyEdits(t, tc.old, tc.new)
+		})
+	}
+}
+
+func TestDiff_HunkCounts(t *testing.T) {
+	dir := t.TempDir()
+	p1 := createFile(t, dir, "d1.txt", "a\nb\nc\nd\n")
+	p2 := createFile(t, dir, "d2.txt", "a\nX\nc\nd\ne\n")
+
+	result := runDiff(t, []string{p1, p2})
+
+	if len(result.Hunks) != 2 {
+		t.Fatalf("expected 2 hunks (b→X, +e), got %d: %+v", len(result.Hunks), result.Hunks)
+	}
+
+	first := result.Hunks[0]
+	if first.OldStart != 2 || first.OldCount != 1 || first.NewStart != 2 || first.NewCount != 1 {
+		t.Errorf("first hunk header = -%d,%d +%d,%d; want -2,1 +2,1",
+			first.OldStart, first.OldCount, first.NewStart, first.NewCount)
+	}
+
+	second := result.Hunks[1]
+	if second.OldCount != 0 || second.NewCount != 1 {
+		t.Errorf("second hunk header = -%d,%d +%d,%d; want old_count=0 new_count=1",
+			second.OldStart, second.OldCount, second.NewStart, second.NewCount)
+	}
+
+	// The unchanged line "a" must not appear in any hunk.
+	for _, h := range result.Hunks {
+		for _, l := range h.Lines {
+			if l.Content == "a" {
+				t.Errorf("unchanged line %q leaked into a hunk as %q", l.Content, l.Type)
+			}
+		}
+	}
+}

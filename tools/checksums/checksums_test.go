@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	pathutil "github.com/synseqack/aict/internal/path"
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runChecksums(args []string) (string, error) {
@@ -80,7 +81,7 @@ func TestChecksums_NonExistent(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
 	defer os.Unsetenv("AICT_XML")
 
-	output, err := runChecksums([]string{"/nonexistent/file.txt"})
+	output, err := runChecksums([]string{testutil.MissingPath(t, "file.txt")})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -131,7 +133,7 @@ func TestAwk_NR(t *testing.T) {
 }
 
 func TestAwk_MissingFile(t *testing.T) {
-	result := runAwk(t, []string{"{print $1}", "/nonexistent/file.txt"})
+	result := runAwk(t, []string{"{print $1}", testutil.MissingPath(t, "file.txt")})
 	if len(result.Errors) == 0 {
 		t.Error("expected error for non-existent file")
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -167,7 +169,7 @@ func TestSed_RegexAddress(t *testing.T) {
 }
 
 func TestSed_MissingFile(t *testing.T) {
-	result := runSed(t, []string{"-e", "s/a/b/", "/nonexistent/file.txt"})
+	result := runSed(t, []string{"-e", "s/a/b/", testutil.MissingPath(t, "file.txt")})
 	if len(result.Errors) == 0 {
 		t.Error("expected error for non-existent file")
 	}

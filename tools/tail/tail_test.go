@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runTail(args []string) (string, error) {
@@ -118,7 +120,7 @@ func TestTail_EmptyFile(t *testing.T) {
 }
 
 func TestTail_NonExistent(t *testing.T) {
-	result, err := runTailWithOutput("/nonexistent/file.txt", Config{XML: true})
+	result, err := runTailWithOutput(testutil.MissingPath(t, "file.txt"), Config{XML: true})
 	if err != nil {
 		t.Fatal(err)
 	}

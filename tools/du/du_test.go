@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runDu(args []string) (string, error) {
@@ -156,7 +158,7 @@ func TestDu_NonExistent(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err := Run([]string{"/nonexistent/path"})
+	err := Run([]string{testutil.MissingPath(t, "path")})
 
 	w.Close()
 	os.Stdout = oldStdout

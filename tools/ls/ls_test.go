@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runLS(args []string) (string, error) {
@@ -171,7 +173,7 @@ func TestLS_Symlinks(t *testing.T) {
 }
 
 func TestLS_Error_NonExistent(t *testing.T) {
-	result, err := runLSWithOutput([]string{"/nonexistent/path/that/does/not/exist"}, Config{XML: true})
+	result, err := runLSWithOutput([]string{testutil.MissingPath(t, "does-not-exist")}, Config{XML: true})
 	if err != nil {
 		t.Fatal(err)
 	}

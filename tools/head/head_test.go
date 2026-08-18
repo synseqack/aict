@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runHead(args []string) (string, error) {
@@ -124,7 +126,7 @@ func TestHead_EmptyFile(t *testing.T) {
 }
 
 func TestHead_NonExistent(t *testing.T) {
-	result, err := runHeadWithOutput("/nonexistent/file.txt", Config{XML: true})
+	result, err := runHeadWithOutput(testutil.MissingPath(t, "file.txt"), Config{XML: true})
 	if err != nil {
 		t.Fatal(err)
 	}

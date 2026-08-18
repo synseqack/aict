@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -127,7 +129,7 @@ func TestDiff_MissingFile(t *testing.T) {
 	dir := t.TempDir()
 	existing := createFile(t, dir, "a.txt", "hello\n")
 
-	result := runDiff(t, []string{existing, "/nonexistent/missing.txt"})
+	result := runDiff(t, []string{existing, testutil.MissingPath(t, "missing.txt")})
 	if len(result.Errors) == 0 {
 		t.Error("expected error for missing file")
 	}

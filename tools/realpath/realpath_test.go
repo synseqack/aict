@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func runRealpath(args []string) (string, error) {
@@ -64,7 +66,7 @@ func TestRealpath_Directory(t *testing.T) {
 }
 
 func TestRealpath_NonExistent(t *testing.T) {
-	result, err := runRealpathWithOutput("/nonexistent/path/file.txt")
+	result, err := runRealpathWithOutput(testutil.MissingPath(t, "file.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}

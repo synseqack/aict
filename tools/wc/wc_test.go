@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -141,7 +143,7 @@ func TestWC_Directory(t *testing.T) {
 }
 
 func TestWC_Missing(t *testing.T) {
-	result, err := runWC([]string{"/nonexistent/file.txt"}, Config{Lines: true, Words: true, Bytes: true})
+	result, err := runWC([]string{testutil.MissingPath(t, "file.txt")}, Config{Lines: true, Words: true, Bytes: true})
 	if err != nil {
 		t.Fatal(err)
 	}

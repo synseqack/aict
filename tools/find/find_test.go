@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -147,7 +149,7 @@ func TestFind_Invert(t *testing.T) {
 }
 
 func TestFind_Missing(t *testing.T) {
-	result := runFind(t, []string{"/nonexistent/directory"})
+	result := runFind(t, []string{testutil.MissingPath(t, "directory")})
 	if len(result.Errors) == 0 {
 		t.Error("expected error for non-existent root")
 	}

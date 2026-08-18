@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createTar(t *testing.T, dir, name string, files map[string]string) string {
@@ -122,7 +124,7 @@ func TestTar_FileTypes(t *testing.T) {
 }
 
 func TestTar_NonExistent(t *testing.T) {
-	result := runTar(t, []string{"/nonexistent/archive.tar"})
+	result := runTar(t, []string{testutil.MissingPath(t, "archive.tar")})
 	if len(result.Errors) == 0 {
 		t.Error("expected error for non-existent archive")
 	}

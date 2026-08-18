@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/synseqack/aict/internal/testutil"
 )
 
 func createFile(t *testing.T, dir, name, content string) string {
@@ -109,7 +111,7 @@ func TestCat_Directory(t *testing.T) {
 }
 
 func TestCat_Missing(t *testing.T) {
-	result, err := catFile("/nonexistent/missing.txt", Config{})
+	result, err := catFile(testutil.MissingPath(t, "missing.txt"), Config{})
 	if err != nil {
 		t.Fatal(err)
 	}

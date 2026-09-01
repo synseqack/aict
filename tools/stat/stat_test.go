@@ -114,7 +114,9 @@ func TestStat_XMLValidity(t *testing.T) {
 	path := createFile(t, dir, "test.txt", "hello\n")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

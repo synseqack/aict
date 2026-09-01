@@ -20,6 +20,25 @@ import (
 func init() {
 	tool.Register("cat", Run)
 	tool.RegisterMeta("cat", tool.GenerateSchema("cat", "Read and output file contents with metadata", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"s":  "size_bytes",
+		"ln": "lines",
+		"enc":"encoding",
+		"lang":"language",
+		"bin":"binary",
+		"mime":"mime",
+		"m":  "modified",
+		"ma": "modified_ago_s",
+		"ct": "content",
+		"f":  "file",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("cat", dict)
 }
 
 type Config struct {
@@ -28,33 +47,34 @@ type Config struct {
 	JSON        bool
 	Plain       bool
 	Pretty      bool
-	Compact bool
+	NoCompact  bool
+	Dict        bool
 }
 
 type CatResult struct {
-	XMLName      xml.Name    `xml:"cat"`
-	Path         string      `xml:"path,attr"`
-	Absolute     string      `xml:"absolute,attr"`
-	SizeBytes    int64       `xml:"size_bytes,attr"`
-	Lines        int         `xml:"lines,attr"`
-	Encoding     string      `xml:"encoding,attr"`
-	Language     string      `xml:"language,attr"`
-	Binary       string      `xml:"binary,attr"`
-	MIME         string      `xml:"mime,attr"`
-	Modified     int64       `xml:"modified,attr"`
-	ModifiedAgoS int64       `xml:"modified_ago_s,attr"`
-	Content      string      `xml:"content,omitempty"`
-	Files        []CatResult `xml:"file,omitempty"`
-	Errors       []CatError  `xml:"error,omitempty"`
+	XMLName      xml.Name    `xml:"cat" json:"-"`
+	Path         string      `xml:"path,attr" json:"p"`
+	Absolute     string      `xml:"absolute,attr" json:"a"`
+	SizeBytes    int64       `xml:"size_bytes,attr" json:"s"`
+	Lines        int         `xml:"lines,attr" json:"ln"`
+	Encoding     string      `xml:"encoding,attr" json:"enc"`
+	Language     string      `xml:"language,attr" json:"lang"`
+	Binary       string      `xml:"binary,attr" json:"bin"`
+	MIME         string      `xml:"mime,attr" json:"mime"`
+	Modified     int64       `xml:"modified,attr" json:"m"`
+	ModifiedAgoS int64       `xml:"modified_ago_s,attr" json:"ma"`
+	Content      string      `xml:"content,omitempty" json:"ct"`
+	Files        []CatResult `xml:"file,omitempty" json:"f"`
+	Errors       []CatError  `xml:"error,omitempty" json:"e"`
 }
 
 func (*CatResult) isCatResult() {}
 
 type CatError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -103,8 +123,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -302,14 +324,33 @@ func isBinaryContent(data []byte) bool {
 }
 
 func outputResult(result *CatResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("cat")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

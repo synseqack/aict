@@ -16,34 +16,63 @@ import (
 func init() {
 	tool.Register("completions", Run)
 	tool.RegisterMeta("completions", tool.GenerateSchema("completions", "Generate shell completion scripts for aict", Config{}))
+	xmlout.RegisterDict("completions", map[string]string{
+		"s": "shell",
+		"sc": "script",
+	})
 }
 
 type Config struct {
-	Shell string `flag:"" desc:"Shell type: bash, zsh, fish"`
-	XML   bool
-	JSON  bool
-	Plain bool
-	Pretty bool
+	Shell     string `flag:"" desc:"Shell type: bash, zsh, fish"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type CompletionsResult struct {
-	XMLName   xml.Name `xml:"completions"`
-	Shell     string   `xml:"shell,attr"`
-	Script    string   `xml:"script,omitempty"`
-	Timestamp int64    `xml:"timestamp,attr"`
-	Errors    []CompletionsError `xml:"error,omitempty"`
+	XMLName   xml.Name `xml:"completions" json:"-"`
+	Shell     string   `xml:"shell,attr" json:"s"`
+	Script    string   `xml:"script,omitempty" json:"sc,omitempty"`
+	Timestamp int64    `xml:"timestamp,attr" json:"t"`
+	Errors    []CompletionsError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*CompletionsResult) isCompletionsResult() {}
 
 type CompletionsError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
 }
 
 func Run(args []string) error {
 	cfg, _ := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("completions")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	result := &CompletionsResult{
 		Shell:     cfg.Shell,
@@ -90,6 +119,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				cfg.Shell = arg

@@ -18,44 +18,75 @@ import (
 func init() {
 	tool.Register("jq", Run)
 	tool.RegisterMeta("jq", tool.GenerateSchema("jq", "Extract values from JSON files using path expressions", Config{}))
+	xmlout.RegisterDict("jq", map[string]string{
+		"pa": "path",
+		"i": "index",
+		"tp": "type",
+		"r": "raw",
+	})
 }
 
 type Config struct {
-	Path    string `flag:"" desc:"JSON path expression (e.g. .key, .[0], .[].field)"`
-	Raw     bool   `flag:"" desc:"Output raw string values without quotes"`
-	XML     bool
-	JSON    bool
-	Plain   bool
-	Pretty  bool
+	Path      string `flag:"" desc:"JSON path expression (e.g. .key, .[0], .[].field)"`
+	Raw       bool   `flag:"" desc:"Output raw string values without quotes"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type JQResult struct {
-	XMLName xml.Name   `xml:"jq"`
-	Path    string     `xml:"path,attr"`
-	Count   int        `xml:"count,attr"`
-	Timestamp int64    `xml:"timestamp,attr"`
-	Values  []JQValue  `xml:"value,omitempty"`
-	Errors  []JQError  `xml:"error,omitempty"`
+	XMLName  xml.Name   `xml:"jq" json:"-"`
+	Path     string     `xml:"path,attr" json:"pa"`
+	Count    int        `xml:"count,attr" json:"c"`
+	Timestamp int64     `xml:"timestamp,attr" json:"t"`
+	Values   []JQValue  `xml:"value,omitempty" json:"values,omitempty"`
+	Errors   []JQError  `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*JQResult) isJQResult() {}
 
 type JQValue struct {
-	XMLName xml.Name `xml:"value"`
-	Index   int      `xml:"index,attr"`
-	Type    string   `xml:"type,attr"`
-	Raw     string   `xml:"raw,attr"`
+	XMLName xml.Name `xml:"value" json:"-"`
+	Index   int      `xml:"index,attr" json:"i"`
+	Type    string   `xml:"type,attr" json:"tp"`
+	Raw     string   `xml:"raw,attr" json:"r"`
 }
 
 type JQError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
 	cfg, paths := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("jq")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	if cfg.Path == "" {
 		cfg.Path = "."
@@ -134,6 +165,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			positional = append(positional, arg)
 		}

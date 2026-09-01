@@ -17,6 +17,18 @@ import (
 func init() {
 	tool.Register("cut", Run)
 	tool.RegisterMeta("cut", tool.GenerateSchema("cut", "Cut out sections of each line from files", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"del":"delimiter",
+		"flds":"fields",
+		"lp": "lines_processed",
+		"ct": "content",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("cut", dict)
 }
 
 type Config struct {
@@ -28,25 +40,26 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	Compact bool
+	NoCompact bool
+	Dict       bool
 }
 
 type CutResult struct {
-	XMLName        xml.Name   `xml:"cut"`
-	Timestamp      int64      `xml:"timestamp,attr"`
-	Delimiter      string     `xml:"delimiter,attr"`
-	Fields         string     `xml:"fields,attr"`
-	LinesProcessed int        `xml:"lines_processed,attr"`
-	Content        string     `xml:"content,omitempty"`
-	Errors         []CutError `xml:"error,omitempty"`
+	XMLName        xml.Name   `xml:"cut" json:"-"`
+	Timestamp      int64      `xml:"timestamp,attr" json:"t"`
+	Delimiter      string     `xml:"delimiter,attr" json:"del"`
+	Fields         string     `xml:"fields,attr" json:"flds"`
+	LinesProcessed int        `xml:"lines_processed,attr" json:"lp"`
+	Content        string     `xml:"content,omitempty" json:"ct"`
+	Errors         []CutError `xml:"error,omitempty" json:"e"`
 }
 
 func (*CutResult) isCutResult() {}
 
 type CutError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -114,8 +127,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -256,14 +271,33 @@ func cutStdin(cfg Config) error {
 }
 
 func outputResult(result *CutResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("cut")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

@@ -17,6 +17,16 @@ import (
 func init() {
 	tool.Register("env", Run)
 	tool.RegisterMeta("env", tool.GenerateSchema("env", "Display environment variables with types and redaction", Config{}))
+	xmlout.RegisterDict("env", map[string]string{
+		"n": "name",
+		"v": "value",
+		"tp": "type",
+		"pr": "present",
+		"r": "redacted",
+		"pe": "path_exists",
+		"i": "index",
+		"e": "exists",
+	})
 }
 
 var secretKeywords = []string{
@@ -25,48 +35,72 @@ var secretKeywords = []string{
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
-	Compact bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type EnvResult struct {
-	XMLName   xml.Name    `xml:"env"`
-	Timestamp int64       `xml:"timestamp,attr"`
-	Variables []EnvVar    `xml:"var,omitempty"`
-	Path      []PathEntry `xml:"path_entry,omitempty"`
-	Errors    []EnvError  `xml:"error,omitempty"`
+	XMLName   xml.Name    `xml:"env" json:"-"`
+	Timestamp int64       `xml:"timestamp,attr" json:"t"`
+	Variables []EnvVar    `xml:"var,omitempty" json:"vars,omitempty"`
+	Path      []PathEntry `xml:"path_entry,omitempty" json:"paths,omitempty"`
+	Errors    []EnvError  `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*EnvResult) isEnvResult() {}
 
 type EnvVar struct {
-	XMLName    xml.Name `xml:"var"`
-	Name       string   `xml:"name,attr"`
-	Value      string   `xml:"value,attr"`
-	Type       string   `xml:"type,attr"`
-	Present    string   `xml:"present,attr"`
-	Redacted   string   `xml:"redacted,attr"`
-	PathExists string   `xml:"path_exists,attr,omitempty"`
+	XMLName    xml.Name `xml:"var" json:"-"`
+	Name       string   `xml:"name,attr" json:"n"`
+	Value      string   `xml:"value,attr" json:"v"`
+	Type       string   `xml:"type,attr" json:"tp"`
+	Present    string   `xml:"present,attr" json:"pr"`
+	Redacted   string   `xml:"redacted,attr" json:"r"`
+	PathExists string   `xml:"path_exists,attr,omitempty" json:"pe,omitempty"`
 }
 
 type PathEntry struct {
-	XMLName xml.Name `xml:"path_entry"`
-	Index   int      `xml:"index,attr"`
-	Path    string   `xml:"path,attr"`
-	Exists  string   `xml:"exists,attr"`
+	XMLName xml.Name `xml:"path_entry" json:"-"`
+	Index   int      `xml:"index,attr" json:"i"`
+	Path    string   `xml:"path,attr" json:"p"`
+	Exists  string   `xml:"exists,attr" json:"e"`
 }
 
 type EnvError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
 }
 
 func Run(args []string) error {
 	cfg, _ := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("env")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	result := &EnvResult{
 		Timestamp: meta.Now(),
@@ -141,8 +175,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -218,10 +254,7 @@ func parsePath(pathValue string) []string {
 
 func outputResult(result *EnvResult, cfg Config) error {
 	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

@@ -10,7 +10,9 @@ import (
 func runEnvWithResult(t *testing.T) *EnvResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

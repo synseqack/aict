@@ -90,7 +90,9 @@ func TestDu_Summarize(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello world")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -152,7 +154,9 @@ func TestDu_MaxDepth(t *testing.T) {
 
 func TestDu_NonExistent(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -182,7 +186,9 @@ func TestDu_XMLValidity(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -215,7 +221,9 @@ func TestDu_HumanReadable(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello world")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

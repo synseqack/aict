@@ -21,6 +21,28 @@ import (
 func init() {
 	tool.Register("find", Run)
 	tool.RegisterMeta("find", tool.GenerateSchema("find", "Find files by name, type, or modification time", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"t":  "timestamp",
+		"sr": "search_root",
+		"n":  "total_matches",
+		"s":  "size_bytes",
+		"m":  "modified",
+		"ma": "modified_ago_s",
+		"d":  "depth",
+		"lang":"language",
+		"mime":"mime",
+		"ty": "type",
+		"cond":"condition",
+		"neg":"negated",
+		"md": "maxdepth",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("find", dict)
 }
 
 type Config struct {
@@ -35,7 +57,8 @@ type Config struct {
 	JSON     bool
 	Plain    bool
 	Pretty   bool
-	Compact  bool
+	NoCompact bool
+	Dict     bool
 
 	// predicates preserves argument order and per-predicate negation
 	// (-not binds to the next predicate only, GNU find semantics).
@@ -50,14 +73,14 @@ type predicate struct {
 }
 
 type FindResult struct {
-	XMLName      xml.Name        `xml:"find"`
-	SearchRoot   string          `xml:"search_root,attr"`
-	Absolute     string          `xml:"absolute,attr"`
-	Conditions   []FindCondition `xml:"condition"`
-	TotalMatches int             `xml:"total_matches,attr"`
-	Timestamp    int64           `xml:"timestamp,attr"`
-	Matches      []FindFile      `xml:"file"`
-	Errors       []FindError     `xml:"error,omitempty"`
+	XMLName      xml.Name        `xml:"find" json:"-"`
+	SearchRoot   string          `xml:"search_root,attr" json:"sr"`
+	Absolute     string          `xml:"absolute,attr" json:"a"`
+	Conditions   []FindCondition `xml:"condition" json:"cond"`
+	TotalMatches int             `xml:"total_matches,attr" json:"n"`
+	Timestamp    int64           `xml:"timestamp,attr" json:"t"`
+	Matches      []FindFile      `xml:"file" json:"matches"`
+	Errors       []FindError     `xml:"error,omitempty" json:"e"`
 }
 
 func (*FindResult) isFindResult() {}
@@ -70,23 +93,23 @@ type FindCondition struct {
 }
 
 type FindFile struct {
-	XMLName      xml.Name `xml:"file"`
-	Path         string   `xml:"path,attr"`
-	Absolute     string   `xml:"absolute,attr"`
-	Type         string   `xml:"type,attr"`
-	SizeBytes    int64    `xml:"size_bytes,attr"`
-	Modified     int64    `xml:"modified,attr"`
-	ModifiedAgoS int64    `xml:"modified_ago_s,attr"`
-	Language     string   `xml:"language,attr"`
-	MIME         string   `xml:"mime,attr"`
-	Depth        int      `xml:"depth,attr"`
+	XMLName      xml.Name `xml:"file" json:"-"`
+	Path         string   `xml:"path,attr" json:"p"`
+	Absolute     string   `xml:"absolute,attr" json:"a"`
+	Type         string   `xml:"type,attr" json:"ty"`
+	SizeBytes    int64    `xml:"size_bytes,attr" json:"s"`
+	Modified     int64    `xml:"modified,attr" json:"m"`
+	ModifiedAgoS int64    `xml:"modified_ago_s,attr" json:"ma"`
+	Language     string   `xml:"language,attr" json:"lang"`
+	MIME         string   `xml:"mime,attr" json:"mime"`
+	Depth        int      `xml:"depth,attr" json:"d"`
 }
 
 type FindError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -184,8 +207,10 @@ func parseFlags(args []string) (Config, string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)
@@ -369,14 +394,33 @@ func evalPredicate(p predicate, path string, info os.FileInfo) bool {
 }
 
 func outputResult(result *FindResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("find")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

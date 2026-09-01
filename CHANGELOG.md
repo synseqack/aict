@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-01
+
+### Added
+- Compact output mode (default): short attribute names (`p`, `a`, `s`, `t`) reduce token usage ~20%
+- `--dict` flag shows short-to-long name mapping for any tool
+- `--no-compact` flag reverts to verbose long attribute names
+- JSON struct tags on all tool result types for compact JSON output
+- `basename` tool with `stem` and `extension` attributes
+- `dirname` tool for directory portion of paths
+
+### Changed
+- All 31 tools now register dictionaries via `xmlout.RegisterDict()`
+- Booleans output as `1`/`0` in compact mode, `true`/`false` in verbose
+- Updated README with compact mode documentation and tool count (34)
+
+### Fixed
+- `grep`: last line of files without trailing newline was silently dropped (`findMatches` broke on `io.EOF` instead of processing remaining data)
+- `find` tests referenced non-existent `FindResult.Entries` field (should be `Matches`)
+
 ## [2.1.0] - 2026-07-14
 
 ### Added

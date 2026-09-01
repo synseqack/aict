@@ -20,46 +20,55 @@ import (
 func init() {
 	tool.Register("awk", Run)
 	tool.RegisterMeta("awk", tool.GenerateSchema("awk", "Extract fields and apply pattern-action rules to file contents", Config{}))
+	xmlout.RegisterDict("awk", map[string]string{
+		"p": "program",
+		"fs": "field_sep",
+		"tl": "total_lines",
+		"n": "number",
+		"o": "output",
+	})
 }
 
 type Config struct {
-	FieldSep string `flag:"" desc:"Field separator (-F)"`
-	Program  string `flag:"" desc:"Awk program"`
-	XML      bool
-	JSON     bool
-	Plain    bool
-	Pretty   bool
+	FieldSep  string `flag:"" desc:"Field separator (-F)"`
+	Program   string `flag:"" desc:"Awk program"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type AwkResult struct {
-	XMLName    xml.Name   `xml:"awk"`
-	Program    string     `xml:"program,attr"`
-	FieldSep   string     `xml:"field_sep,attr"`
-	TotalLines int        `xml:"total_lines,attr"`
-	Timestamp  int64      `xml:"timestamp,attr"`
-	Files      []AwkFile  `xml:"file,omitempty"`
-	Errors     []AwkError `xml:"error,omitempty"`
+	XMLName    xml.Name   `xml:"awk" json:"-"`
+	Program    string     `xml:"program,attr" json:"p"`
+	FieldSep   string     `xml:"field_sep,attr" json:"fs"`
+	TotalLines int        `xml:"total_lines,attr" json:"tl"`
+	Timestamp  int64      `xml:"timestamp,attr" json:"t"`
+	Files      []AwkFile  `xml:"file,omitempty" json:"files,omitempty"`
+	Errors     []AwkError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*AwkResult) isAwkResult() {}
 
 type AwkFile struct {
-	XMLName xml.Name  `xml:"file"`
-	Path    string    `xml:"path,attr"`
-	Lines   []AwkLine `xml:"line,omitempty"`
+	XMLName xml.Name  `xml:"file" json:"-"`
+	Path    string    `xml:"path,attr" json:"p"`
+	Lines   []AwkLine `xml:"line,omitempty" json:"lines,omitempty"`
 }
 
 type AwkLine struct {
-	XMLName xml.Name `xml:"line"`
-	Number  int      `xml:"number,attr"`
-	Output  string   `xml:"output,attr"`
+	XMLName xml.Name `xml:"line" json:"-"`
+	Number  int      `xml:"number,attr" json:"n"`
+	Output  string   `xml:"output,attr" json:"o"`
 }
 
 type AwkError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr,omitempty"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr,omitempty" json:"p,omitempty"`
 }
 
 type rule struct {
@@ -70,6 +79,29 @@ type rule struct {
 
 func Run(args []string) error {
 	cfg, paths := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("awk")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	result := &AwkResult{
 		Program:   cfg.Program,
@@ -190,6 +222,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			if cfg.Program == "" && !strings.HasPrefix(arg, "-") {
 				cfg.Program = arg

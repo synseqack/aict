@@ -50,7 +50,9 @@ func createTar(t *testing.T, dir, name string, files map[string]string) string {
 func runTar(t *testing.T, args []string) *TarResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

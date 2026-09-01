@@ -24,7 +24,9 @@ func runSystem(args []string) (string, error) {
 
 func TestSystem_Basic(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	output, err := runSystem([]string{})
 	if err != nil {
@@ -38,7 +40,9 @@ func TestSystem_Basic(t *testing.T) {
 
 func TestSystem_XMLValidity(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

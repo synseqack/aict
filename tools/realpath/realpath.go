@@ -15,6 +15,19 @@ import (
 func init() {
 	tool.Register("realpath", Run)
 	tool.RegisterMeta("realpath", tool.GenerateSchema("realpath", "Print resolved absolute paths", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"e":  "entry",
+		"p":  "path",
+		"a":  "absolute",
+		"ex": "exists",
+		"ty": "type",
+		"err":"error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("realpath", dict)
 }
 
 type Config struct {
@@ -22,31 +35,32 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type RealpathResult struct {
-	XMLName   xml.Name        `xml:"realpath"`
-	Paths     []RealpathEntry `xml:"entry,omitempty"`
-	Timestamp int64           `xml:"timestamp,attr"`
-	Errors    []RealpathError `xml:"error,omitempty"`
+	XMLName   xml.Name        `xml:"realpath" json:"-"`
+	Paths     []RealpathEntry `xml:"entry,omitempty" json:"e"`
+	Timestamp int64           `xml:"timestamp,attr" json:"t"`
+	Errors    []RealpathError `xml:"error,omitempty" json:"err"`
 }
 
 func (*RealpathResult) isRealpathResult() {}
 
 type RealpathEntry struct {
-	XMLName  xml.Name `xml:"entry"`
-	Path     string   `xml:"path,attr"`
-	Absolute string   `xml:"absolute,attr"`
-	Exists   string   `xml:"exists,attr"`
-	Type     string   `xml:"type,attr"`
+	XMLName  xml.Name `xml:"entry" json:"-"`
+	Path     string   `xml:"path,attr" json:"p"`
+	Absolute string   `xml:"absolute,attr" json:"a"`
+	Exists   string   `xml:"exists,attr" json:"ex"`
+	Type     string   `xml:"type,attr" json:"ty"`
 }
 
 type RealpathError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -79,8 +93,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -136,14 +152,33 @@ func resolvePath(path string) RealpathEntry {
 }
 
 func outputResult(result *RealpathResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("realpath")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

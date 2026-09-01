@@ -16,6 +16,21 @@ import (
 func init() {
 	tool.Register("uniq", Run)
 	tool.RegisterMeta("uniq", tool.GenerateSchema("uniq", "Report or filter out repeated lines", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"lin":"lines_in",
+		"lout":"lines_out",
+		"dr": "duplicates_removed",
+		"ct": "content",
+		"d":  "duplicate",
+		"l":  "line",
+		"cnt":"count",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("uniq", dict)
 }
 
 type Config struct {
@@ -27,32 +42,33 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	Compact bool
+	NoCompact bool
+	Dict       bool
 }
 
 type UniqResult struct {
-	XMLName           xml.Name    `xml:"uniq"`
-	Timestamp         int64       `xml:"timestamp,attr"`
-	LinesIn           int         `xml:"lines_in,attr"`
-	LinesOut          int         `xml:"lines_out,attr"`
-	DuplicatesRemoved int         `xml:"duplicates_removed,attr"`
-	Content           string      `xml:"content,omitempty"`
-	Duplicates        []UniqDup   `xml:"duplicate,omitempty"`
-	Errors            []UniqError `xml:"error,omitempty"`
+	XMLName           xml.Name    `xml:"uniq" json:"-"`
+	Timestamp         int64       `xml:"timestamp,attr" json:"t"`
+	LinesIn           int         `xml:"lines_in,attr" json:"lin"`
+	LinesOut          int         `xml:"lines_out,attr" json:"lout"`
+	DuplicatesRemoved int         `xml:"duplicates_removed,attr" json:"dr"`
+	Content           string      `xml:"content,omitempty" json:"ct"`
+	Duplicates        []UniqDup   `xml:"duplicate,omitempty" json:"d"`
+	Errors            []UniqError `xml:"error,omitempty" json:"e"`
 }
 
 func (*UniqResult) isUniqResult() {}
 
 type UniqDup struct {
-	XMLName xml.Name `xml:"duplicate"`
-	Line    string   `xml:"line,attr"`
-	Count   int      `xml:"count,attr"`
+	XMLName xml.Name `xml:"duplicate" json:"-"`
+	Line    string   `xml:"line,attr" json:"l"`
+	Count   int      `xml:"count,attr" json:"cnt"`
 }
 
 type UniqError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -119,8 +135,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -251,14 +269,33 @@ func uniqStdin(cfg Config) error {
 }
 
 func outputResult(result *UniqResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("uniq")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

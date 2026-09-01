@@ -22,7 +22,9 @@ func createFile(t *testing.T, dir, name, content string) string {
 func runSed(t *testing.T, args []string) *SedResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -182,5 +184,72 @@ func TestSed_XMLValidity(t *testing.T) {
 	result := runSed(t, []string{"-e", "s/hello/world/", path})
 	if result.XMLName.Local != "sed" {
 		t.Errorf("expected root element 'sed', got %q", result.XMLName.Local)
+	}
+}
+
+func TestSed_Empty(t *testing.T) {
+	dir := t.TempDir()
+	filePath := createFile(t, dir, "empty.txt", "")
+
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{"-e", "s/a/b/g", filePath})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result SedResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if len(result.Files) > 0 && result.Files[0].LinesRead != 0 {
+		t.Errorf("expected LinesRead=0, got %d", result.Files[0].LinesRead)
+	}
+}
+
+func TestSed_NoScript(t *testing.T) {
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result SedResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if len(result.Errors) == 0 {
+		t.Error("expected error for missing script")
 	}
 }

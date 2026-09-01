@@ -20,7 +20,11 @@ func createFile(t *testing.T, dir, name, content string) string {
 func runGrep(t *testing.T, args []string) *GrepResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -174,5 +178,43 @@ func TestGrep_XMLValidity(t *testing.T) {
 	result := runGrep(t, []string{"hello", path})
 	if result.XMLName.Local != "grep" {
 		t.Errorf("expected root element 'grep', got %q", result.XMLName.Local)
+	}
+}
+
+func TestGrep_LargeFile(t *testing.T) {
+	dir := t.TempDir()
+	var content string
+	for i := 0; i < 1000; i++ {
+		content += "line " + string(rune('A'+i%26)) + " here\n"
+	}
+	createFile(t, dir, "large.txt", content)
+
+	result := runGrep(t, []string{"-r", "here", dir})
+
+	if result.MatchedFiles < 1 {
+		t.Errorf("expected at least 1 matched file, got %d", result.MatchedFiles)
+	}
+}
+
+func TestGrep_SpecialChars(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "file with spaces.txt", "hello world")
+	createFile(t, dir, "file-with-dashes.txt", "hello world")
+
+	result := runGrep(t, []string{"-r", "hello", dir})
+
+	if result.MatchedFiles < 2 {
+		t.Errorf("expected at least 2 matched files, got %d", result.MatchedFiles)
+	}
+}
+
+func TestGrep_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "empty.txt", "")
+
+	result := runGrep(t, []string{"-r", "anything", dir})
+
+	if result.MatchedFiles != 0 {
+		t.Errorf("expected 0 matched files, got %d", result.MatchedFiles)
 	}
 }

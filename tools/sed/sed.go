@@ -19,6 +19,15 @@ import (
 func init() {
 	tool.Register("sed", Run)
 	tool.RegisterMeta("sed", tool.GenerateSchema("sed", "Apply sed-style transformations to file contents (s, d, p, q commands)", Config{}))
+	xmlout.RegisterDict("sed", map[string]string{
+		"s": "script",
+		"lr": "lines_read",
+		"lo": "lines_output",
+		"su": "substitutions",
+		"n": "number",
+		"ct": "content",
+		"ch": "changed",
+	})
 }
 
 type Config struct {
@@ -29,40 +38,42 @@ type Config struct {
 	JSON          bool
 	Plain         bool
 	Pretty        bool
+	Dict          bool
+	NoCompact     bool
 }
 
 type SedResult struct {
-	XMLName   xml.Name   `xml:"sed"`
-	Script    string     `xml:"script,attr"`
-	Timestamp int64      `xml:"timestamp,attr"`
-	Files     []SedFile  `xml:"file,omitempty"`
-	Errors    []SedError `xml:"error,omitempty"`
+	XMLName   xml.Name   `xml:"sed" json:"-"`
+	Script    string     `xml:"script,attr" json:"s"`
+	Timestamp int64      `xml:"timestamp,attr" json:"t"`
+	Files     []SedFile  `xml:"file,omitempty" json:"files,omitempty"`
+	Errors    []SedError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*SedResult) isSedResult() {}
 
 type SedFile struct {
-	XMLName      xml.Name  `xml:"file"`
-	Path         string    `xml:"path,attr"`
-	Absolute     string    `xml:"absolute,attr"`
-	LinesRead    int       `xml:"lines_read,attr"`
-	LinesOutput  int       `xml:"lines_output,attr"`
-	Substitutions int      `xml:"substitutions,attr"`
-	Lines        []SedLine `xml:"line,omitempty"`
+	XMLName      xml.Name  `xml:"file" json:"-"`
+	Path         string    `xml:"path,attr" json:"p"`
+	Absolute     string    `xml:"absolute,attr" json:"a"`
+	LinesRead    int       `xml:"lines_read,attr" json:"lr"`
+	LinesOutput  int       `xml:"lines_output,attr" json:"lo"`
+	Substitutions int      `xml:"substitutions,attr" json:"su"`
+	Lines        []SedLine `xml:"line,omitempty" json:"lines,omitempty"`
 }
 
 type SedLine struct {
-	XMLName xml.Name `xml:"line"`
-	Number  int      `xml:"number,attr"`
-	Content string   `xml:"content,attr"`
-	Changed bool     `xml:"changed,attr,omitempty"`
+	XMLName xml.Name `xml:"line" json:"-"`
+	Number  int      `xml:"number,attr" json:"n"`
+	Content string   `xml:"content,attr" json:"ct"`
+	Changed bool     `xml:"changed,attr,omitempty" json:"ch,omitempty"`
 }
 
 type SedError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr,omitempty"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr,omitempty" json:"p,omitempty"`
 }
 
 type command struct {
@@ -82,6 +93,29 @@ type command struct {
 
 func Run(args []string) error {
 	cfg, paths := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("sed")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	result := &SedResult{
 		Script:    cfg.Script,
@@ -153,6 +187,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)

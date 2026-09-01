@@ -20,6 +20,31 @@ import (
 func init() {
 	tool.Register("diff", Run)
 	tool.RegisterMeta("diff", tool.GenerateSchema("diff", "Compare two files or directories and show differences", Config{}))
+
+	dict := map[string]string{
+		"of": "old_file",
+		"nf": "new_file",
+		"ol": "old_label",
+		"nl": "new_label",
+		"al": "added_lines",
+		"rl": "removed_lines",
+		"ch": "changed_hunks",
+		"id": "identical",
+		"t":  "timestamp",
+		"h":  "hunk",
+		"os": "old_start",
+		"oc": "old_count",
+		"ns": "new_start",
+		"nc": "new_count",
+		"l":  "line",
+		"ty": "type",
+		"num":"number",
+		"ct": "content",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("diff", dict)
 }
 
 type Config struct {
@@ -34,22 +59,23 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
-	Compact bool
+	NoCompact     bool
+	Dict           bool
 }
 
 type DiffResult struct {
-	XMLName      xml.Name    `xml:"diff"`
-	OldFile      string      `xml:"old_file,attr"`
-	NewFile      string      `xml:"new_file,attr"`
-	OldLabel     string      `xml:"old_label,attr,omitempty"`
-	NewLabel     string      `xml:"new_label,attr,omitempty"`
-	AddedLines   int         `xml:"added_lines,attr"`
-	RemovedLines int         `xml:"removed_lines,attr"`
-	ChangedHunks int         `xml:"changed_hunks,attr"`
-	Identical    bool        `xml:"identical,attr"`
-	Timestamp    int64       `xml:"timestamp,attr"`
-	Hunks        []DiffHunk  `xml:"hunk"`
-	Errors       []DiffError `xml:"error,omitempty"`
+	XMLName      xml.Name    `xml:"diff" json:"-"`
+	OldFile      string      `xml:"old_file,attr" json:"of"`
+	NewFile      string      `xml:"new_file,attr" json:"nf"`
+	OldLabel     string      `xml:"old_label,attr,omitempty" json:"ol"`
+	NewLabel     string      `xml:"new_label,attr,omitempty" json:"nl"`
+	AddedLines   int         `xml:"added_lines,attr" json:"al"`
+	RemovedLines int         `xml:"removed_lines,attr" json:"rl"`
+	ChangedHunks int         `xml:"changed_hunks,attr" json:"ch"`
+	Identical    bool        `xml:"identical,attr" json:"id"`
+	Timestamp    int64       `xml:"timestamp,attr" json:"t"`
+	Hunks        []DiffHunk  `xml:"hunk" json:"h"`
+	Errors       []DiffError `xml:"error,omitempty" json:"e"`
 }
 
 func (*DiffResult) isDiffResult() {}
@@ -57,26 +83,26 @@ func (*DiffResult) isDiffResult() {}
 var wsRe = regexp.MustCompile(`\s+`)
 
 type DiffHunk struct {
-	XMLName  xml.Name   `xml:"hunk"`
-	OldStart int        `xml:"old_start,attr"`
-	OldCount int        `xml:"old_count,attr"`
-	NewStart int        `xml:"new_start,attr"`
-	NewCount int        `xml:"new_count,attr"`
-	Lines    []DiffLine `xml:"line"`
+	XMLName  xml.Name   `xml:"hunk" json:"-"`
+	OldStart int        `xml:"old_start,attr" json:"os"`
+	OldCount int        `xml:"old_count,attr" json:"oc"`
+	NewStart int        `xml:"new_start,attr" json:"ns"`
+	NewCount int        `xml:"new_count,attr" json:"nc"`
+	Lines    []DiffLine `xml:"line" json:"l"`
 }
 
 type DiffLine struct {
-	XMLName xml.Name `xml:"line"`
-	Type    string   `xml:"type,attr"`
-	Number  int      `xml:"number,attr"`
-	Content string   `xml:"content,attr"`
+	XMLName xml.Name `xml:"line" json:"-"`
+	Type    string   `xml:"type,attr" json:"ty"`
+	Number  int      `xml:"number,attr" json:"num"`
+	Content string   `xml:"content,attr" json:"ct"`
 }
 
 type DiffError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -192,8 +218,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)
@@ -529,14 +557,33 @@ func diffDirectories(oldDir, newDir string, cfg Config) error {
 }
 
 func outputResult(result *DiffResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("diff")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

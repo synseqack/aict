@@ -22,7 +22,9 @@ func createFile(t *testing.T, dir, name, content string) string {
 func runAwk(t *testing.T, args []string) *AwkResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -146,5 +148,72 @@ func TestAwk_XMLValidity(t *testing.T) {
 	result := runAwk(t, []string{"{print $1}", path})
 	if result.XMLName.Local != "awk" {
 		t.Errorf("expected root element 'awk', got %q", result.XMLName.Local)
+	}
+}
+
+func TestAwk_Empty(t *testing.T) {
+	dir := t.TempDir()
+	filePath := createFile(t, dir, "empty.txt", "")
+
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{"{print $0}", filePath})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result AwkResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if result.TotalLines != 0 {
+		t.Errorf("expected TotalLines=0, got %d", result.TotalLines)
+	}
+}
+
+func TestAwk_NoProgram(t *testing.T) {
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result AwkResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if len(result.Errors) == 0 {
+		t.Error("expected error for missing program")
 	}
 }

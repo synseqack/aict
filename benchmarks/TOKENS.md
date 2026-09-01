@@ -7,7 +7,9 @@ loses.
 
 ## Headline result
 
-**aict output costs 1.1–7.8× more tokens per task than terse GNU output.**
+**aict output costs 1.0–6.3× more tokens per task than terse GNU output.**
+With compact mode (default), this drops to **1.0–5.1×** — a ~20% reduction.
+The `compare` task achieves parity (1.0×) in compact mode.
 What you buy with those tokens:
 
 - **Fewer round-trips.** 3 of 5 tasks below need 2–4 GNU calls (`ls` then
@@ -42,6 +44,54 @@ Measured with tiktoken `o200k_base` on the captured transcripts
 Token counts cover command output only. They do **not** include the per-call
 overhead of extra agent turns (tool-call JSON, model reasoning between calls),
 which multiplies the real cost of the multi-call GNU sequences.
+
+## Compact mode (default since v0.2)
+
+All XML/JSON output now uses short attribute names by default. Use `--dict`
+to see the mapping, `--no-compact` to revert to verbose output.
+
+### Token benchmark: compact vs verbose
+
+| Task | Verbose tokens | Compact tokens | Savings |
+|------|----------------|----------------|----------|
+| inventory (ls + file) | 562 | 421 | 25% |
+| read (cat + wc + file) | 176 | 162 | 8% |
+| search (grep) | 255 | 208 | 18% |
+| locate (find + stat) | 234 | 188 | 20% |
+| compare (diff) | 133 | 92 | 31% |
+
+**Average savings: ~20%** across benchmark scenarios.
+
+### Per-tool byte savings
+
+| Tool | Verbose bytes | Compact bytes | Savings |
+|------|---------------|---------------|----------|
+| ls | 9,035 | 7,030 | 22% |
+| find | 172,556 | 146,024 | 15% |
+| grep | 171 | 82 | 52% |
+| cat | 130 | 77 | 40% |
+| stat | 477 | 359 | 24% |
+| wc | 314 | 240 | 23% |
+| diff | 190 | 125 | 34% |
+| head | 200 | 102 | 49% |
+| tail | 200 | 102 | 49% |
+| du | 29,746 | 23,675 | 20% |
+| df | 8,243 | 5,135 | 37% |
+| file | 112 | 72 | 35% |
+| ps | 107,670 | 93,901 | 12% |
+| env | 11,853 | 9,665 | 18% |
+| sort | 89 | 67 | 24% |
+| uniq | 86 | 52 | 39% |
+| cut | 82 | 53 | 35% |
+| awk | 125 | 103 | 17% |
+| sed | 120 | 115 | 4% |
+
+The `--dict` flag outputs the short→long name mapping:
+```xml
+<dict><a>absolute</a><p>path</p><s>size_bytes</s></dict>
+```
+
+This is useful for training small summarization models on aict output.
 
 ## Known costs in aict output
 

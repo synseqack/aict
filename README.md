@@ -102,7 +102,7 @@ export AICT_XML=1
 
 ## Tools
 
-33 tools across 6 categories. Every tool supports `--xml` (default), `--json`, and `--plain`.
+34 tools across 6 categories. Every tool supports `--xml` (default), `--json`, and `--plain`. Compact mode (default) uses short attribute names to save tokens — use `--no-compact` for verbose output or `--dict` to see the mapping.
 
 | Category | Tools |
 |----------|-------|
@@ -121,14 +121,14 @@ Additional: `git` (status, diff, log, ls-files, blame) · `completions` (bash/zs
 
 All tools follow the same conventions:
 
-| Field | Convention |
-|-------|-----------|
-| Paths | Always absolute (`absolute` attr) |
-| Timestamps | Unix epoch integers + `_ago_s` companion |
-| Sizes | Bytes (`size_bytes`) + human-readable (`size_human`) |
-| Booleans | `"true"` / `"false"` strings |
-| Errors | `<error code="" msg=""/>` elements — never stderr |
-| Empty results | Valid XML with zero counts, never an error |
+| Field | Compact (default) | Verbose (`--no-compact`) |
+|-------|-------------------|------------------------|
+| Paths | `p`, `a` | `path`, `absolute` |
+| Timestamps | `t` (epoch int) + `ma` (`_ago_s`) | `timestamp` + `modified_ago_s` |
+| Sizes | `s` (bytes) + `sh` (`size_human`) | `size_bytes` + `size_human` |
+| Booleans | `1` / `0` | `"true"` / `"false"` |
+| Errors | `<error c="" msg=""/>` | `<error code="" msg=""/>` |
+| Empty results | Valid XML with zero counts, never an error | Same |
 
 ---
 

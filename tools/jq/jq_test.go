@@ -20,7 +20,9 @@ func writeJSON(t *testing.T, dir, name, content string) string {
 func runJQ(t *testing.T, args []string) *JQResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

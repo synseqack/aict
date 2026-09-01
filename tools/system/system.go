@@ -17,6 +17,32 @@ import (
 func init() {
 	tool.Register("system", Run)
 	tool.RegisterMeta("system", tool.GenerateSchema("system", "Display system information including user, OS, and runtime details", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"u":  "user",
+		"un": "username",
+		"uid":"uid",
+		"gid":"gid",
+		"h":  "home",
+		"sh": "shell",
+		"grp":"group",
+		"os": "os",
+		"goos":"goos",
+		"arc":"goarch",
+		"hn": "hostname",
+		"kern":"kernel",
+		"rel":"os_release",
+		"dist":"distro",
+		"r":  "runtime",
+		"ver":"version",
+		"ncpu":"num_cpu",
+		"ngr": "num_goroutine",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("system", dict)
 }
 
 type Config struct {
@@ -24,51 +50,52 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type SystemResult struct {
-	XMLName   xml.Name      `xml:"system"`
-	Timestamp int64         `xml:"timestamp,attr"`
-	User      UserInfo      `xml:"user"`
-	OS        OSInfo        `xml:"os"`
-	Runtime   RuntimeInfo   `xml:"runtime"`
-	Errors    []SystemError `xml:"error,omitempty"`
+	XMLName   xml.Name      `xml:"system" json:"-"`
+	Timestamp int64         `xml:"timestamp,attr" json:"t"`
+	User      UserInfo      `xml:"user" json:"u"`
+	OS        OSInfo        `xml:"os" json:"os"`
+	Runtime   RuntimeInfo   `xml:"runtime" json:"r"`
+	Errors    []SystemError `xml:"error,omitempty" json:"e"`
 }
 
 func (*SystemResult) isSystemResult() {}
 
 type UserInfo struct {
-	XMLName  xml.Name `xml:"user"`
-	Username string   `xml:"username,attr"`
-	UID      string   `xml:"uid,attr"`
-	GID      string   `xml:"gid,attr"`
-	Home     string   `xml:"home,attr"`
-	Shell    string   `xml:"shell,attr"`
-	Groups   []string `xml:"group"`
+	XMLName  xml.Name `xml:"user" json:"-"`
+	Username string   `xml:"username,attr" json:"un"`
+	UID      string   `xml:"uid,attr" json:"uid"`
+	GID      string   `xml:"gid,attr" json:"gid"`
+	Home     string   `xml:"home,attr" json:"h"`
+	Shell    string   `xml:"shell,attr" json:"sh"`
+	Groups   []string `xml:"group" json:"grp"`
 }
 
 type OSInfo struct {
-	XMLName   xml.Name `xml:"os"`
-	GOOS      string   `xml:"goos,attr"`
-	GOARCH    string   `xml:"goarch,attr"`
-	Hostname  string   `xml:"hostname,attr"`
-	Kernel    string   `xml:"kernel,attr"`
-	OSRelease string   `xml:"os_release,attr"`
-	Distro    string   `xml:"distro,attr"`
+	XMLName   xml.Name `xml:"os" json:"-"`
+	GOOS      string   `xml:"goos,attr" json:"goos"`
+	GOARCH    string   `xml:"goarch,attr" json:"arc"`
+	Hostname  string   `xml:"hostname,attr" json:"hn"`
+	Kernel    string   `xml:"kernel,attr" json:"kern"`
+	OSRelease string   `xml:"os_release,attr" json:"rel"`
+	Distro    string   `xml:"distro,attr" json:"dist"`
 }
 
 type RuntimeInfo struct {
-	XMLName      xml.Name `xml:"runtime"`
-	Version      string   `xml:"version,attr"`
-	NumCPU       int      `xml:"num_cpu,attr"`
-	NumGoroutine int      `xml:"num_goroutine,attr"`
+	XMLName      xml.Name `xml:"runtime" json:"-"`
+	Version      string   `xml:"version,attr" json:"ver"`
+	NumCPU       int      `xml:"num_cpu,attr" json:"ncpu"`
+	NumGoroutine int      `xml:"num_goroutine,attr" json:"ngr"`
 }
 
 type SystemError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -100,8 +127,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		}
 	}
 
@@ -209,14 +238,33 @@ func getRuntimeInfo() RuntimeInfo {
 }
 
 func outputResult(result *SystemResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("system")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

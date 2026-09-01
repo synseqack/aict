@@ -21,6 +21,38 @@ import (
 func init() {
 	tool.Register("stat", Run)
 	tool.RegisterMeta("stat", tool.GenerateSchema("stat", "Display detailed file metadata including timestamps, permissions, and ownership", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"ino":"inode",
+		"lnk":"links",
+		"dev":"device",
+		"per":"permissions",
+		"mo": "mode_octal",
+		"uid":"uid",
+		"gid":"gid",
+		"o":  "owner",
+		"g":  "group",
+		"s":  "size_bytes",
+		"sh": "size_human",
+		"at": "atime",
+		"aat":"atime_ago_s",
+		"mt": "mtime",
+		"mat":"mtime_ago_s",
+		"ct": "ctime",
+		"cat":"ctime_ago_s",
+		"b":  "birth",
+		"ba": "birth_ago_s",
+		"ty": "type",
+		"mime":"mime",
+		"lang":"language",
+		"t":  "timestamp",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("stat", dict)
 }
 
 type Config struct {
@@ -29,46 +61,47 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
-	Compact bool
+	NoCompact     bool
+	Dict           bool
 }
 
 type StatResult struct {
-	XMLName     xml.Name    `xml:"stat"`
-	Path        string      `xml:"path,attr"`
-	Absolute    string      `xml:"absolute,attr"`
-	Inode       uint64      `xml:"inode,attr"`
-	Links       int         `xml:"links,attr"`
-	Device      uint64      `xml:"device,attr"`
-	Permissions string      `xml:"permissions,attr"`
-	ModeOctal   string      `xml:"mode_octal,attr"`
-	UID         uint32      `xml:"uid,attr"`
-	GID         uint32      `xml:"gid,attr"`
-	Owner       string      `xml:"owner,attr"`
-	Group       string      `xml:"group,attr"`
-	SizeBytes   int64       `xml:"size_bytes,attr"`
-	SizeHuman   string      `xml:"size_human,attr"`
-	Atime       int64       `xml:"atime,attr"`
-	AtimeAgoS   int64       `xml:"atime_ago_s,attr"`
-	Mtime       int64       `xml:"mtime,attr"`
-	MtimeAgoS   int64       `xml:"mtime_ago_s,attr"`
-	Ctime       int64       `xml:"ctime,attr"`
-	CtimeAgoS   int64       `xml:"ctime_ago_s,attr"`
-	Birth       int64       `xml:"birth,attr"`
-	BirthAgoS   int64       `xml:"birth_ago_s,attr"`
-	Type        string      `xml:"type,attr"`
-	MIME        string      `xml:"mime,attr"`
-	Language    string      `xml:"language,attr"`
-	Timestamp   int64       `xml:"timestamp,attr"`
-	Errors      []StatError `xml:"error,omitempty"`
+	XMLName     xml.Name    `xml:"stat" json:"-"`
+	Path        string      `xml:"path,attr" json:"p"`
+	Absolute    string      `xml:"absolute,attr" json:"a"`
+	Inode       uint64      `xml:"inode,attr" json:"ino"`
+	Links       int         `xml:"links,attr" json:"lnk"`
+	Device      uint64      `xml:"device,attr" json:"dev"`
+	Permissions string      `xml:"permissions,attr" json:"per"`
+	ModeOctal   string      `xml:"mode_octal,attr" json:"mo"`
+	UID         uint32      `xml:"uid,attr" json:"uid"`
+	GID         uint32      `xml:"gid,attr" json:"gid"`
+	Owner       string      `xml:"owner,attr" json:"o"`
+	Group       string      `xml:"group,attr" json:"g"`
+	SizeBytes   int64       `xml:"size_bytes,attr" json:"s"`
+	SizeHuman   string      `xml:"size_human,attr" json:"sh"`
+	Atime       int64       `xml:"atime,attr" json:"at"`
+	AtimeAgoS   int64       `xml:"atime_ago_s,attr" json:"aat"`
+	Mtime       int64       `xml:"mtime,attr" json:"mt"`
+	MtimeAgoS   int64       `xml:"mtime_ago_s,attr" json:"mat"`
+	Ctime       int64       `xml:"ctime,attr" json:"ct"`
+	CtimeAgoS   int64       `xml:"ctime_ago_s,attr" json:"cat"`
+	Birth       int64       `xml:"birth,attr" json:"b"`
+	BirthAgoS   int64       `xml:"birth_ago_s,attr" json:"ba"`
+	Type        string      `xml:"type,attr" json:"ty"`
+	MIME        string      `xml:"mime,attr" json:"mime"`
+	Language    string      `xml:"language,attr" json:"lang"`
+	Timestamp   int64       `xml:"timestamp,attr" json:"t"`
+	Errors      []StatError `xml:"error,omitempty" json:"e"`
 }
 
 func (*StatResult) isStatResult() {}
 
 type StatError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -109,8 +142,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -242,14 +277,33 @@ func statPath(path string, cfg Config) (*StatResult, error) {
 }
 
 func outputResult(result *StatResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("stat")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

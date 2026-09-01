@@ -24,19 +24,57 @@ import (
 func init() {
 	tool.Register("ls", Run)
 	tool.RegisterMeta("ls", tool.GenerateSchema("ls", "List directory contents with file metadata including permissions, size, and modification time", Config{}))
+
+	// Register dictionary for compact output
+	dict := map[string]string{
+		// LSResult
+		"p":  "path",
+		"a":  "absolute",
+		"n":  "total_entries",
+		"h":  "hidden",
+		"r":  "recursive",
+		"t":  "timestamp",
+		"ent": "entries",
+		"err": "error",
+		// FileEntry
+		"f":    "file",
+		"name": "name",
+		"s":    "size_bytes",
+		"sh":   "size_human",
+		"m":    "modified",
+		"ma":   "modified_ago_s",
+		"per":  "permissions",
+		"mo":   "mode",
+		"o":    "owner",
+		"g":    "group",
+		"exe":  "executable",
+		"sym":  "symlink",
+		"mime": "mime",
+		"lang": "language",
+		"bin":  "binary",
+		// DirEntry
+		"d":   "directory",
+		// SymlinkEntry
+		"sy":  "symlink_entry",
+		"tgt": "target",
+		"ta":  "target_absolute",
+		"te":  "target_exists",
+	}
+	xmlout.RegisterDict("ls", dict)
 }
 
 type Config struct {
-	All       bool `flag:"" desc:"Show hidden files (starting with .)"`
-	AlmostAll bool `flag:"" desc:"Show almost all (exclude . and ..)"`
-	SortTime  bool `flag:"" desc:"Sort by modification time, newest first"`
-	Reverse   bool `flag:"" desc:"Reverse sort order"`
-	Recursive bool `flag:"" desc:"List subdirectories recursively"`
-	XML       bool
-	JSON      bool
-	Plain     bool
-	Pretty    bool
-	Compact   bool
+	All        bool `flag:"" desc:"Show hidden files (starting with .)"`
+	AlmostAll  bool `flag:"" desc:"Show almost all (exclude . and ..)"`
+	SortTime   bool `flag:"" desc:"Sort by modification time, newest first"`
+	Reverse    bool `flag:"" desc:"Reverse sort order"`
+	Recursive  bool `flag:"" desc:"List subdirectories recursively"`
+	XML        bool
+	JSON       bool
+	Plain      bool
+	Pretty     bool
+	Dict       bool
+	NoCompact  bool
 }
 
 type LSItem interface {
@@ -44,75 +82,75 @@ type LSItem interface {
 }
 
 type LSResult struct {
-	XMLName      xml.Name      `xml:"ls"`
-	Path         string        `xml:"path,attr"`
-	Absolute     string        `xml:"absolute,attr"`
-	TotalEntries int           `xml:"total_entries,attr"`
-	Hidden       bool          `xml:"hidden,attr"`
-	Recursive    bool          `xml:"recursive,attr"`
-	Timestamp    int64         `xml:"timestamp,attr"`
-	Entries      []interface{} `xml:",any"`
-	Errors       []LSError     `xml:"error,omitempty"`
+	XMLName      xml.Name      `xml:"ls" json:"-"`
+	Path         string        `xml:"path,attr" json:"p"`
+	Absolute     string        `xml:"absolute,attr" json:"a"`
+	TotalEntries int           `xml:"total_entries,attr" json:"n"`
+	Hidden       bool          `xml:"hidden,attr" json:"h"`
+	Recursive    bool          `xml:"recursive,attr" json:"r"`
+	Timestamp    int64         `xml:"timestamp,attr" json:"t"`
+	Entries      []interface{} `xml:",any" json:"ent"`
+	Errors       []LSError     `xml:"error,omitempty" json:"err"`
 }
 
 func (*LSResult) isLSItem() {}
 
 type FileEntry struct {
-	XMLName      xml.Name `xml:"file"`
-	Name         string   `xml:"name,attr"`
-	Path         string   `xml:"path,attr"`
-	Absolute     string   `xml:"absolute,attr"`
-	SizeBytes    uint64   `xml:"size_bytes,attr"`
-	SizeHuman    string   `xml:"size_human,attr"`
-	Modified     int64    `xml:"modified,attr"`
-	ModifiedAgoS int64    `xml:"modified_ago_s,attr"`
-	Permissions  string   `xml:"permissions,attr"`
-	Mode         string   `xml:"mode,attr"`
-	Owner        string   `xml:"owner,attr"`
-	Group        string   `xml:"group,attr"`
-	Executable   string   `xml:"executable,attr"`
-	Symlink      string   `xml:"symlink,attr"`
-	MIME         string   `xml:"mime,attr"`
-	Language     string   `xml:"language,attr"`
-	Binary       string   `xml:"binary,attr"`
+	XMLName      xml.Name `xml:"file" json:"-"`
+	Name         string   `xml:"name,attr" json:"n"`
+	Path         string   `xml:"path,attr" json:"p"`
+	Absolute     string   `xml:"absolute,attr" json:"a"`
+	SizeBytes    uint64   `xml:"size_bytes,attr" json:"s"`
+	SizeHuman    string   `xml:"size_human,attr" json:"sh"`
+	Modified     int64    `xml:"modified,attr" json:"m"`
+	ModifiedAgoS int64    `xml:"modified_ago_s,attr" json:"ma"`
+	Permissions  string   `xml:"permissions,attr" json:"per"`
+	Mode         string   `xml:"mode,attr" json:"mo"`
+	Owner        string   `xml:"owner,attr" json:"o"`
+	Group        string   `xml:"group,attr" json:"g"`
+	Executable   string   `xml:"executable,attr" json:"exe"`
+	Symlink      string   `xml:"symlink,attr" json:"sym"`
+	MIME         string   `xml:"mime,attr" json:"mime"`
+	Language     string   `xml:"language,attr" json:"lang"`
+	Binary       string   `xml:"binary,attr" json:"bin"`
 }
 
 func (FileEntry) isLSItem() {}
 
 type DirEntry struct {
-	XMLName      xml.Name `xml:"directory"`
-	Name         string   `xml:"name,attr"`
-	Path         string   `xml:"path,attr"`
-	Modified     int64    `xml:"modified,attr"`
-	ModifiedAgoS int64    `xml:"modified_ago_s,attr"`
-	Permissions  string   `xml:"permissions,attr"`
-	Mode         string   `xml:"mode,attr"`
-	Owner        string   `xml:"owner,attr"`
-	Group        string   `xml:"group,attr"`
+	XMLName      xml.Name `xml:"directory" json:"-"`
+	Name         string   `xml:"name,attr" json:"n"`
+	Path         string   `xml:"path,attr" json:"p"`
+	Modified     int64    `xml:"modified,attr" json:"m"`
+	ModifiedAgoS int64    `xml:"modified_ago_s,attr" json:"ma"`
+	Permissions  string   `xml:"permissions,attr" json:"per"`
+	Mode         string   `xml:"mode,attr" json:"mo"`
+	Owner        string   `xml:"owner,attr" json:"o"`
+	Group        string   `xml:"group,attr" json:"g"`
 }
 
 func (DirEntry) isLSItem() {}
 
 type SymlinkEntry struct {
-	XMLName        xml.Name `xml:"symlink"`
-	Name           string   `xml:"name,attr"`
-	Path           string   `xml:"path,attr"`
-	Target         string   `xml:"target,attr"`
-	TargetAbsolute string   `xml:"target_absolute,attr"`
-	TargetExists   string   `xml:"target_exists,attr"`
-	Modified       int64    `xml:"modified,attr"`
-	ModifiedAgoS   int64    `xml:"modified_ago_s,attr"`
-	Permissions    string   `xml:"permissions,attr"`
-	Mode           string   `xml:"mode,attr"`
+	XMLName        xml.Name `xml:"symlink" json:"-"`
+	Name           string   `xml:"name,attr" json:"n"`
+	Path           string   `xml:"path,attr" json:"p"`
+	Target         string   `xml:"target,attr" json:"tgt"`
+	TargetAbsolute string   `xml:"target_absolute,attr" json:"ta"`
+	TargetExists   string   `xml:"target_exists,attr" json:"te"`
+	Modified       int64    `xml:"modified,attr" json:"m"`
+	ModifiedAgoS   int64    `xml:"modified_ago_s,attr" json:"ma"`
+	Permissions    string   `xml:"permissions,attr" json:"per"`
+	Mode           string   `xml:"mode,attr" json:"mo"`
 }
 
 func (SymlinkEntry) isLSItem() {}
 
 type LSError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -161,8 +199,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -435,14 +475,39 @@ func lookupOwner(info fs.FileInfo) (owner, group string) {
 }
 
 func outputResult(result *LSResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-			return xmlout.WriteJSONCompact(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("ls")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
 		}
-		return xmlout.WriteJSON(os.Stdout, result)
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.NoCompact {
+		if cfg.JSON {
+			return xmlout.WriteJSON(os.Stdout, result)
+		}
+		return xmlout.WriteXMLNoCompact(os.Stdout, result, cfg.Pretty)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

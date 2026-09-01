@@ -22,7 +22,11 @@ func createFile(t *testing.T, dir, name, content string) string {
 func runFind(t *testing.T, args []string) *FindResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -213,5 +217,33 @@ func TestFind_NotEachPredicate(t *testing.T) {
 	}
 	if len(names) != 1 || names[0] != "a.go" {
 		t.Errorf("expected exactly [a.go], got %v", names)
+	}
+}
+
+func TestFind_DeepNesting(t *testing.T) {
+	dir := t.TempDir()
+	current := dir
+	for i := 0; i < 5; i++ {
+		current = filepath.Join(current, "level")
+		os.MkdirAll(current, 0755)
+	}
+	createFile(t, current, "deep.txt", "content")
+
+	result := runFind(t, []string{dir})
+
+	if len(result.Matches) == 0 {
+		t.Error("expected at least 1 entry in deep directory")
+	}
+}
+
+func TestFind_SpecialChars(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "file with spaces.txt", "hello")
+	createFile(t, dir, "file-with-dashes.txt", "hello")
+
+	result := runFind(t, []string{dir})
+
+	if len(result.Matches) < 2 {
+		t.Errorf("expected at least 2 entries, got %d", len(result.Matches))
 	}
 }

@@ -69,7 +69,9 @@ func TestSort_Reverse(t *testing.T) {
 	filePath := createFile(t, dir, "test.txt", "apple\nbanana\ncherry")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -199,4 +201,42 @@ func createFile(t *testing.T, dir, name, content string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestSort_Empty(t *testing.T) {
+	dir := t.TempDir()
+	filePath := createFile(t, dir, "empty.txt", "")
+
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{filePath})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result SortResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if result.LinesIn != 0 {
+		t.Errorf("expected LinesIn=0, got %d", result.LinesIn)
+	}
+	if result.LinesOut != 0 {
+		t.Errorf("expected LinesOut=0, got %d", result.LinesOut)
+	}
 }

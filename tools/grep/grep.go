@@ -24,6 +24,30 @@ import (
 func init() {
 	tool.Register("grep", Run)
 	tool.RegisterMeta("grep", tool.GenerateSchema("grep", "Search for patterns in files with line numbers and context", Config{}))
+
+	dict := map[string]string{
+		"p":  "pattern",
+		"fl": "flags",
+		"r":  "recursive",
+		"cs": "case_sensitive",
+		"mt": "match_type",
+		"sf": "searched_files",
+		"mf": "matched_files",
+		"n":  "total_matches",
+		"sr": "search_root",
+		"t":  "timestamp",
+		"m":  "match",
+		"f":  "file",
+		"ln": "line_num",
+		"txt":"text",
+		"ob": "offset_bytes",
+		"lang":"language",
+		"mif":"matches_in_file",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("grep", dict)
 }
 
 type Config struct {
@@ -48,50 +72,51 @@ type Config struct {
 	JSON             bool
 	Plain            bool
 	Pretty           bool
-	Compact bool
+	NoCompact        bool
+	Dict             bool
 }
 
 type GrepResult struct {
-	XMLName       xml.Name        `xml:"grep"`
-	Pattern       string          `xml:"pattern,attr"`
-	Flags         string          `xml:"flags,attr"`
-	Recursive     string          `xml:"recursive,attr"`
-	CaseSensitive string          `xml:"case_sensitive,attr"`
-	MatchType     string          `xml:"match_type,attr"`
-	SearchedFiles int             `xml:"searched_files,attr"`
-	MatchedFiles  int             `xml:"matched_files,attr"`
-	TotalMatches  int             `xml:"total_matches,attr"`
-	SearchRoot    string          `xml:"search_root,attr"`
-	Timestamp     int64           `xml:"timestamp,attr"`
-	Matches       []GrepFileMatch `xml:"match"`
-	Errors        []GrepError     `xml:"error,omitempty"`
+	XMLName       xml.Name        `xml:"grep" json:"-"`
+	Pattern       string          `xml:"pattern,attr" json:"p"`
+	Flags         string          `xml:"flags,attr" json:"fl"`
+	Recursive     string          `xml:"recursive,attr" json:"r"`
+	CaseSensitive string          `xml:"case_sensitive,attr" json:"cs"`
+	MatchType     string          `xml:"match_type,attr" json:"mt"`
+	SearchedFiles int             `xml:"searched_files,attr" json:"sf"`
+	MatchedFiles  int             `xml:"matched_files,attr" json:"mf"`
+	TotalMatches  int             `xml:"total_matches,attr" json:"n"`
+	SearchRoot    string          `xml:"search_root,attr" json:"sr"`
+	Timestamp     int64           `xml:"timestamp,attr" json:"t"`
+	Matches       []GrepFileMatch `xml:"match" json:"m"`
+	Errors        []GrepError     `xml:"error,omitempty" json:"e"`
 }
 
 func (*GrepResult) isGrepResult() {}
 
 type GrepFileMatch struct {
-	XMLName       xml.Name    `xml:"file"`
-	Path          string      `xml:"path,attr"`
-	Absolute      string      `xml:"absolute,attr"`
-	Language      string      `xml:"language,attr"`
-	MatchesInFile int         `xml:"matches_in_file,attr"`
-	Lines         []GrepMatch `xml:"line"`
+	XMLName       xml.Name    `xml:"file" json:"-"`
+	Path          string      `xml:"path,attr" json:"p"`
+	Absolute      string      `xml:"absolute,attr" json:"a"`
+	Language      string      `xml:"language,attr" json:"lang"`
+	MatchesInFile int         `xml:"matches_in_file,attr" json:"mif"`
+	Lines         []GrepMatch `xml:"line" json:"ln"`
 }
 
 type GrepMatch struct {
-	XMLName     xml.Name `xml:"line"`
-	Number      int      `xml:"number,attr"`
-	Text        string   `xml:"text,attr"`
-	OffsetBytes int64    `xml:"offset_bytes,attr"`
-	Before      string   `xml:"before,omitempty"`
-	After       string   `xml:"after,omitempty"`
+	XMLName     xml.Name `xml:"line" json:"-"`
+	Number      int      `xml:"number,attr" json:"num"`
+	Text        string   `xml:"text,attr" json:"txt"`
+	OffsetBytes int64    `xml:"offset_bytes,attr" json:"ob"`
+	Before      string   `xml:"before,omitempty" json:"bf"`
+	After       string   `xml:"after,omitempty" json:"af"`
 }
 
 type GrepError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -210,8 +235,10 @@ func parseFlags(args []string) (Config, string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		case "--workers":
 			if i+1 < len(args) {
 				cfg.Workers = args[i+1]
@@ -447,12 +474,13 @@ func findMatches(path string, re *regexp.Regexp, cfg Config) []GrepMatch {
 	var offset int64
 
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
+		line, _ := reader.ReadString('\n')
+		if len(line) == 0 {
 			break
 		}
 		lineNum++
 		line = strings.TrimSuffix(line, "\n")
+		// err != nil here means EOF on the last line without trailing newline — still process it
 
 		if cfg.InvertMatch {
 			if !re.MatchString(line) {
@@ -527,14 +555,33 @@ func findMatches(path string, re *regexp.Regexp, cfg Config) []GrepMatch {
 }
 
 func outputResult(result *GrepResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("grep")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

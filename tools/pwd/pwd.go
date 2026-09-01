@@ -16,6 +16,18 @@ import (
 func init() {
 	tool.Register("pwd", Run)
 	tool.RegisterMeta("pwd", tool.GenerateSchema("pwd", "Print current working directory", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"h":  "home",
+		"rth":"relative_to_home",
+		"t":  "timestamp",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("pwd", dict)
 }
 
 type Config struct {
@@ -23,25 +35,26 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type PwdResult struct {
-	XMLName        xml.Name   `xml:"pwd"`
-	Path           string     `xml:"path,attr"`
-	Absolute       string     `xml:"absolute,attr"`
-	Home           string     `xml:"home,attr"`
-	RelativeToHome string     `xml:"relative_to_home,attr"`
-	Timestamp      int64      `xml:"timestamp,attr"`
-	Errors         []PwdError `xml:"error,omitempty"`
+	XMLName        xml.Name   `xml:"pwd" json:"-"`
+	Path           string     `xml:"path,attr" json:"p"`
+	Absolute       string     `xml:"absolute,attr" json:"a"`
+	Home           string     `xml:"home,attr" json:"h"`
+	RelativeToHome string     `xml:"relative_to_home,attr" json:"rth"`
+	Timestamp      int64      `xml:"timestamp,attr" json:"t"`
+	Errors         []PwdError `xml:"error,omitempty" json:"e"`
 }
 
 func (*PwdResult) isPwdResult() {}
 
 type PwdError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -87,8 +100,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		}
 	}
 
@@ -100,14 +115,33 @@ func parseFlags(args []string) (Config, []string) {
 }
 
 func outputResult(result *PwdResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("pwd")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

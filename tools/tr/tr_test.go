@@ -59,7 +59,9 @@ func TestTr_MissingOperand(t *testing.T) {
 
 func TestTr_XMLValidity(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdin := os.Stdin
 	r, w, _ := os.Pipe()
@@ -114,4 +116,49 @@ func TestTr_ExpandSet(t *testing.T) {
 			t.Errorf("expandSet(%q): expected %q, got %q", tt.input, tt.expected, result)
 		}
 	}
+}
+
+func TestTr_Empty(t *testing.T) {
+	dir := t.TempDir()
+	filePath := createFile(t, dir, "empty.txt", "")
+
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{"a-z", "A-Z", filePath})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result TrResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if result.LinesIn != 0 {
+		t.Errorf("expected LinesIn=0, got %d", result.LinesIn)
+	}
+}
+
+
+func createFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := dir + "/" + name
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

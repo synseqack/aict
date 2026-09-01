@@ -177,7 +177,9 @@ func TestFile_BriefFlag(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	output, err := runFile([]string{"-b", filepath.Join(dir, "test.txt")})
 	if err != nil {
@@ -194,7 +196,9 @@ func TestFile_MIMEFlag(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	output, err := runFile([]string{"-i", filepath.Join(dir, "test.txt")})
 	if err != nil {
@@ -211,7 +215,9 @@ func TestFile_XMLValidity(t *testing.T) {
 	createFile(t, dir, "test.txt", "hello")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

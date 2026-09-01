@@ -14,6 +14,29 @@ import (
 func init() {
 	tool.Register("df", Run)
 	tool.RegisterMeta("df", tool.GenerateSchema("df", "Display disk filesystem usage statistics", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"fss":"filesystems",
+		"dev":"device",
+		"mnt":"mount",
+		"ty": "type",
+		"s":  "size_bytes",
+		"sh": "size_human",
+		"ub": "used_bytes",
+		"uh": "used_human",
+		"ab": "avail_bytes",
+		"ah": "avail_human",
+		"up": "use_pct",
+		"it": "inodes_total",
+		"iu": "inodes_used",
+		"ia": "inodes_avail",
+		"ip": "inodes_pct",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("df", dict)
 }
 
 type Config struct {
@@ -22,41 +45,42 @@ type Config struct {
 	JSON      bool
 	Plain     bool
 	Pretty    bool
-	Compact bool
+	NoCompact  bool
+	Dict      bool
 }
 
 type DfResult struct {
-	XMLName     xml.Name  `xml:"df"`
-	Timestamp   int64     `xml:"timestamp,attr"`
-	Filesystems []FsEntry `xml:"filesystem,omitempty"`
-	Errors      []DfError `xml:"error,omitempty"`
+	XMLName     xml.Name  `xml:"df" json:"-"`
+	Timestamp   int64     `xml:"timestamp,attr" json:"t"`
+	Filesystems []FsEntry `xml:"filesystem,omitempty" json:"fss"`
+	Errors      []DfError `xml:"error,omitempty" json:"e"`
 }
 
 func (*DfResult) isDfResult() {}
 
 type FsEntry struct {
-	XMLName     xml.Name `xml:"filesystem"`
-	Device      string   `xml:"device,attr"`
-	Mount       string   `xml:"mount,attr"`
-	Type        string   `xml:"type,attr"`
-	SizeBytes   int64    `xml:"size_bytes,attr"`
-	SizeHuman   string   `xml:"size_human,attr"`
-	UsedBytes   int64    `xml:"used_bytes,attr"`
-	UsedHuman   string   `xml:"used_human,attr"`
-	AvailBytes  int64    `xml:"avail_bytes,attr"`
-	AvailHuman  string   `xml:"avail_human,attr"`
-	UsePct      int      `xml:"use_pct,attr"`
-	InodesTotal int64    `xml:"inodes_total,attr"`
-	InodesUsed  int64    `xml:"inodes_used,attr"`
-	InodesAvail int64    `xml:"inodes_avail,attr"`
-	InodesPct   int      `xml:"inodes_pct,attr"`
+	XMLName     xml.Name `xml:"filesystem" json:"-"`
+	Device      string   `xml:"device,attr" json:"dev"`
+	Mount       string   `xml:"mount,attr" json:"mnt"`
+	Type        string   `xml:"type,attr" json:"ty"`
+	SizeBytes   int64    `xml:"size_bytes,attr" json:"s"`
+	SizeHuman   string   `xml:"size_human,attr" json:"sh"`
+	UsedBytes   int64    `xml:"used_bytes,attr" json:"ub"`
+	UsedHuman   string   `xml:"used_human,attr" json:"uh"`
+	AvailBytes  int64    `xml:"avail_bytes,attr" json:"ab"`
+	AvailHuman  string   `xml:"avail_human,attr" json:"ah"`
+	UsePct      int      `xml:"use_pct,attr" json:"up"`
+	InodesTotal int64    `xml:"inodes_total,attr" json:"it"`
+	InodesUsed  int64    `xml:"inodes_used,attr" json:"iu"`
+	InodesAvail int64    `xml:"inodes_avail,attr" json:"ia"`
+	InodesPct   int      `xml:"inodes_pct,attr" json:"ip"`
 }
 
 type DfError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -90,8 +114,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -165,14 +191,33 @@ func splitFields(s string) []string {
 }
 
 func outputResult(result *DfResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("df")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

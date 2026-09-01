@@ -333,6 +333,31 @@ done
 - [x] `CHANGELOG.md`: Keep a Changelog format
 - [x] `CONTRIBUTING.md`: How to add new tools
 
+### 3.5 Compact Output Mode
+
+- [x] Implement compact XML/JSON output (short attribute names):
+  - `path` → `p`, `absolute` → `a`, `size_bytes` → `s`, `timestamp` → `t`
+  - Booleans: `true`/`false` → `1`/`0`
+  - ~25% token reduction across all tools
+- [x] Add `--dict` flag to all 32 tools:
+  - Shows short→long name mapping
+  - Useful for model training
+- [x] Add `--no-compact` flag for backward compatibility
+- [x] Register per-tool dictionaries in `init()`
+- [x] Add JSON tags to all struct fields for compact JSON output
+- [x] Write compact mode tests (`internal/xml/compact_test.go`)
+- [x] Update `benchmarks/TOKENS.md` with compact vs verbose data
+- [x] Update `AGENTS.md` with compact output conventions
+
+**Token benchmark results:**
+| Task | Verbose | Compact | Savings |
+|------|---------|---------|----------|
+| inventory (ls) | 562 tok | 421 tok | 25% |
+| read (cat) | 176 tok | 162 tok | 8% |
+| search (grep) | 255 tok | 208 tok | 18% |
+| locate (find) | 234 tok | 188 tok | 20% |
+| compare (diff) | 133 tok | 92 tok | 31% |
+
 ### 3.4 Packaging
 
 - [x] `go install github.com/synseqack/aict@latest` works

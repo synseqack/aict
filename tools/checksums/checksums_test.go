@@ -79,7 +79,9 @@ func TestChecksums_KnownValue(t *testing.T) {
 
 func TestChecksums_NonExistent(t *testing.T) {
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	output, err := runChecksums([]string{testutil.MissingPath(t, "file.txt")})
 	if err != nil {
@@ -96,7 +98,9 @@ func TestChecksums_XMLValidity(t *testing.T) {
 	filePath := createFile(t, dir, "test.txt", "hello world")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -210,4 +214,68 @@ func createFile(t *testing.T, dir, name, content string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestChecksums_Empty(t *testing.T) {
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result ChecksumResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if len(result.Files) != 0 {
+		t.Errorf("expected 0 files, got %d", len(result.Files))
+	}
+}
+
+func TestChecksums_MissingFile(t *testing.T) {
+	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{"/nonexistent/file.txt"})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result ChecksumResult
+	if err := xml.Unmarshal(outBuf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, outBuf.String())
+	}
+
+	if len(result.Errors) == 0 {
+		t.Error("expected error for missing file")
+	}
 }

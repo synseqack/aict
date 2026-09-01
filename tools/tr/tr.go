@@ -16,6 +16,19 @@ import (
 func init() {
 	tool.Register("tr", Run)
 	tool.RegisterMeta("tr", tool.GenerateSchema("tr", "Translate, squeeze, or delete characters from stdin", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"fr": "set1",
+		"to": "set2",
+		"lin":"lines_in",
+		"lout":"lines_out",
+		"ct": "content",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("tr", dict)
 }
 
 type Config struct {
@@ -27,26 +40,27 @@ type Config struct {
 	JSON    bool
 	Plain   bool
 	Pretty  bool
-	Compact bool
+	NoCompact bool
+	Dict    bool
 }
 
 type TrResult struct {
-	XMLName   xml.Name  `xml:"tr"`
-	Timestamp int64     `xml:"timestamp,attr"`
-	Set1      string    `xml:"set1,attr"`
-	Set2      string    `xml:"set2,attr"`
-	LinesIn   int       `xml:"lines_in,attr"`
-	LinesOut  int       `xml:"lines_out,attr"`
-	Content   string    `xml:"content,omitempty"`
-	Errors    []TrError `xml:"error,omitempty"`
+	XMLName   xml.Name  `xml:"tr" json:"-"`
+	Timestamp int64     `xml:"timestamp,attr" json:"t"`
+	Set1      string    `xml:"set1,attr" json:"fr"`
+	Set2      string    `xml:"set2,attr" json:"to"`
+	LinesIn   int       `xml:"lines_in,attr" json:"lin"`
+	LinesOut  int       `xml:"lines_out,attr" json:"lout"`
+	Content   string    `xml:"content,omitempty" json:"ct"`
+	Errors    []TrError `xml:"error,omitempty" json:"e"`
 }
 
 func (*TrResult) isTrResult() {}
 
 type TrError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -81,8 +95,10 @@ func parseFlags(args []string) (Config, error) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -293,14 +309,33 @@ func squeezeChars(s, set string) string {
 }
 
 func outputResult(result *TrResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("tr")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

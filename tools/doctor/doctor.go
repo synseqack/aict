@@ -19,47 +19,81 @@ import (
 func init() {
 	tool.Register("doctor", Run)
 	tool.RegisterMeta("doctor", tool.GenerateSchema("doctor", "Run diagnostics to check aict installation and environment", Config{}))
+	xmlout.RegisterDict("doctor", map[string]string{
+		"v": "version",
+		"o": "os",
+		"ar": "arch",
+		"gv": "go_version",
+		"su": "summary",
+		"ap": "all_passed",
+		"m": "message",
+		"sv": "severity",
+	})
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
-	Compact bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type DoctorResult struct {
-	XMLName   xml.Name      `xml:"doctor"`
-	Timestamp int64         `xml:"timestamp,attr"`
-	Version   string        `xml:"version,attr"`
-	OS        string        `xml:"os,attr"`
-	Arch      string        `xml:"arch,attr"`
-	GoVersion string        `xml:"go_version,attr"`
-	Checks    []Check       `xml:"check"`
-	Summary   string        `xml:"summary,attr"`
-	AllPassed bool          `xml:"all_passed,attr"`
-	Errors    []DoctorError `xml:"error,omitempty"`
+	XMLName   xml.Name      `xml:"doctor" json:"-"`
+	Timestamp int64         `xml:"timestamp,attr" json:"t"`
+	Version   string        `xml:"version,attr" json:"v"`
+	OS        string        `xml:"os,attr" json:"o"`
+	Arch      string        `xml:"arch,attr" json:"ar"`
+	GoVersion string        `xml:"go_version,attr" json:"gv"`
+	Checks    []Check       `xml:"check" json:"checks"`
+	Summary   string        `xml:"summary,attr" json:"su"`
+	AllPassed bool          `xml:"all_passed,attr" json:"ap"`
+	Errors    []DoctorError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*DoctorResult) isDoctorResult() {}
 
 type DoctorError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
 }
 
 type Check struct {
-	XMLName  xml.Name `xml:"check"`
-	Name     string   `xml:"name,attr"`
-	Status   string   `xml:"status,attr"`
-	Message  string   `xml:"message,attr,omitempty"`
-	Severity string   `xml:"severity,attr"`
+	XMLName  xml.Name `xml:"check" json:"-"`
+	Name     string   `xml:"name,attr" json:"n"`
+	Status   string   `xml:"status,attr" json:"s"`
+	Message  string   `xml:"message,attr,omitempty" json:"m,omitempty"`
+	Severity string   `xml:"severity,attr" json:"sv"`
 }
 
 func Run(args []string) error {
 	cfg, _ := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("doctor")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	result := runDiagnostics()
 
@@ -80,8 +114,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		}
 	}
 
@@ -223,10 +259,7 @@ func checkShellCompletions() Check {
 
 func outputResult(result *DoctorResult, cfg Config) error {
 	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

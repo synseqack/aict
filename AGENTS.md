@@ -74,9 +74,7 @@ aict/
     ├── wc/wc.go
     ├── diff/diff.go
     └── ... (one package per tool)
-```
-
-### 4. Tool Implementation Pattern
+```### 4. Tool Implementation Pattern
 
 Every tool follows this structure:
 
@@ -85,10 +83,10 @@ package toolname
 
 import (
     "encoding/xml"
-    "flag"
     "fmt"
     "os"
-    "time"
+    "sort"
+    "strings"
 
     "github.com/synseqack/aict/internal/detect"
     "github.com/synseqack/aict/internal/format"
@@ -97,39 +95,103 @@ import (
     "github.com/synseqack/aict/internal/xmlout"
 )
 
+func init() {
+    tool.Register("toolname", Run)
+    tool.RegisterMeta("toolname", tool.GenerateSchema("toolname", "Description", Config{}))
+    // Register compact dictionary (short -> long names)
+    xmlout.RegisterDict("toolname", map[string]string{
+        "p":    "path",
+        "a":    "absolute",
+        "s":    "size_bytes",
+        "sh":   "size_human",
+        "m":    "modified",
+        "lang": "language",
+    })
+}
+
 type Config struct {
-    // Tool-specific flags
-    XML     bool
-    JSON    bool
-    Plain   bool
-    // ... tool flags
+    XML       bool
+    JSON      bool
+    Plain     bool
+    Pretty    bool
+    Dict      bool   // --dict flag
+    NoCompact bool   // --no-compact flag
+    // ... tool-specific flags
+}
+
+type ToolResult struct {
+    XMLName   xml.Name   `xml:"toolname" json:"-"`
+    Timestamp int64      `xml:"timestamp,attr" json:"t"`
+    Path      string     `xml:"path,attr" json:"p"`
+    Absolute  string     `xml:"absolute,attr" json:"a"`
+    // ... use short json tags for compact output
 }
 
 func Run(args []string) error {
-    cfg := parseFlags(args)
+    cfg, paths := parseFlags(args)
+
+    // Handle --dict flag
+    if cfg.Dict {
+        dict := xmlout.GetRegisteredDict("toolname")
+        if dict != nil {
+            var keys []string
+            for short := range dict {
+                keys = append(keys, short)
+            }
+            for i := 0; i < len(keys); i++ {
+                for j := i + 1; j < len(keys); j++ {
+                    if keys[i] > keys[j] {
+                        keys[i], keys[j] = keys[j], keys[i]
+                    }
+                }
+            }
+            fmt.Print("<dict>")
+            for _, short := range keys {
+                fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+            }
+            fmt.Println("</dict>")
+        }
+        return nil
+    }
+
     // ... tool logic
-    return output(cfg, result)
+    return outputResult(result, cfg)
 }
 
-func parseFlags(args []string) Config {
-    // Use stdlib flag package
-    // Return Config with all flags set
-}
-
-func output(cfg Config, result interface{}) error {
+func outputResult(result *ToolResult, cfg Config) error {
     if cfg.JSON {
         return xmlout.WriteJSON(os.Stdout, result)
     }
     if cfg.Plain {
         return writePlain(os.Stdout, result)
     }
-    return xmlout.WriteXML(os.Stdout, result, cfg.XML)
+    return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }
 ```
+
+**Adding a new tool checklist:**
+1. Create `tools/toolname/toolname.go`
+2. Add `init()` with `tool.Register()`, `tool.RegisterMeta()`, and `xmlout.RegisterDict()`
+3. Add JSON tags to all struct fields for compact output
+4. Add `--dict` and `--no-compact` flag handling in `parseFlags()`
+5. Add dict output logic in `Run()`
+6. Create `tools/toolname/toolname_test.go` with `AICT_NOCOMPACT=1` in test helpers
 
 ### 5. XML Output Rules
 
 **MANDATORY** — every tool output must follow these rules:
+
+#### Compact mode (default)
+
+All XML/JSON output uses short attribute names by default:
+- `path` → `p`, `absolute` → `a`, `size_bytes` → `s`, `timestamp` → `t`
+- Booleans: `true`/`false` → `1`/`0`
+- Use `--no-compact` to get verbose output with long names
+- Use `--dict` to see the short→long mapping for a tool
+- Register dictionaries in `init()`: `xmlout.RegisterDict("toolname", map[string]string{"s": "size_bytes", ...})`
+- Add JSON tags to all struct fields: `` json:"s" `` for short names
+
+#### Verbose mode (--no-compact)
 
 - Root element named after tool: `<ls>`, `<grep>`, `<find>`, etc.
 - Root element always has `timestamp` attribute (Unix epoch integer)

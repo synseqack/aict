@@ -16,37 +16,52 @@ import (
 func init() {
 	tool.Register("basename", Run)
 	tool.RegisterMeta("basename", tool.GenerateSchema("basename", "Print filename portion of file paths", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"e":  "entry",
+		"p":  "path",
+		"b":  "base",
+		"stm":"stem",
+		"ext":"extension",
+		"err":"error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("basename", dict)
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type BasenameResult struct {
-	XMLName   xml.Name        `xml:"basename"`
-	Paths     []BasenameEntry `xml:"entry,omitempty"`
-	Timestamp int64           `xml:"timestamp,attr"`
-	Errors    []BasenameError `xml:"error,omitempty"`
+	XMLName   xml.Name        `xml:"basename" json:"-"`
+	Paths     []BasenameEntry `xml:"entry,omitempty" json:"e"`
+	Timestamp int64           `xml:"timestamp,attr" json:"t"`
+	Errors    []BasenameError `xml:"error,omitempty" json:"err"`
 }
 
 func (*BasenameResult) isBasenameResult() {}
 
 type BasenameEntry struct {
-	XMLName   xml.Name `xml:"entry"`
-	Path      string   `xml:"path,attr"`
-	Base      string   `xml:"base,attr"`
-	Stem      string   `xml:"stem,attr"`
-	Extension string   `xml:"extension,attr"`
+	XMLName   xml.Name `xml:"entry" json:"-"`
+	Path      string   `xml:"path,attr" json:"p"`
+	Base      string   `xml:"base,attr" json:"b"`
+	Stem      string   `xml:"stem,attr" json:"stm"`
+	Extension string   `xml:"extension,attr" json:"ext"`
 }
 
 type BasenameError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -97,6 +112,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -110,11 +129,33 @@ func parseFlags(args []string) (Config, []string) {
 }
 
 func outputResult(result *BasenameResult, cfg Config) error {
-	if cfg.JSON {
-		return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("basename")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

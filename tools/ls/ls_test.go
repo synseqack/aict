@@ -293,7 +293,9 @@ func TestLS_XMLValidity(t *testing.T) {
 	createFile(t, dir, "test.xml", "<root/>")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -386,7 +388,9 @@ func TestLS_MultiplePaths(t *testing.T) {
 	createFile(t, dir2, "b.txt", "b")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -420,4 +424,68 @@ func createFile(t *testing.T, dir, name, content string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestLS_SpecialChars(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "file with spaces.txt", "hello")
+	createFile(t, dir, "file-with-dashes.txt", "hello")
+	createFile(t, dir, "file_underscore.txt", "hello")
+
+	result, err := runLSWithOutput([]string{dir}, Config{XML: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.TotalEntries != 3 {
+		t.Errorf("expected 3 entries, got %d", result.TotalEntries)
+	}
+}
+
+func TestLS_BrokenSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks not fully supported on windows")
+	}
+	dir := t.TempDir()
+	target := filepath.Join(dir, "nonexistent.txt")
+	linkPath := filepath.Join(dir, "broken_link")
+	if err := os.Symlink(target, linkPath); err != nil {
+		t.Skip("symlinks not supported")
+	}
+
+	result, err := runLSWithOutput([]string{dir}, Config{XML: true, All: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var foundSymlink bool
+	for _, e := range result.Entries {
+		if entry, ok := e.(SymlinkEntry); ok {
+			if entry.Name == "broken_link" {
+				foundSymlink = true
+				if entry.TargetExists != "false" {
+					t.Errorf("expected TargetExists=false for broken symlink")
+				}
+			}
+		}
+	}
+	if !foundSymlink {
+		t.Error("expected symlink entry for broken_link")
+	}
+}
+
+func TestLS_LargeDirectory(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 100; i++ {
+		createFile(t, dir, "file"+string(rune('a'+i%26))+".txt", "content")
+	}
+
+	result, err := runLSWithOutput([]string{dir}, Config{XML: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.TotalEntries < 26 {
+		t.Errorf("expected at least 26 entries (deduplication), got %d", result.TotalEntries)
+	}
 }

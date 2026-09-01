@@ -15,6 +15,17 @@ import (
 func init() {
 	tool.Register("dirname", Run)
 	tool.RegisterMeta("dirname", tool.GenerateSchema("dirname", "Print directory portion of file paths", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"e":  "entry",
+		"p":  "path",
+		"dir":"dir",
+		"err":"error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("dirname", dict)
 }
 
 type Config struct {
@@ -22,29 +33,30 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type DirnameResult struct {
-	XMLName   xml.Name       `xml:"dirname"`
-	Paths     []DirnameEntry `xml:"entry,omitempty"`
-	Timestamp int64          `xml:"timestamp,attr"`
-	Errors    []DirnameError `xml:"error,omitempty"`
+	XMLName   xml.Name       `xml:"dirname" json:"-"`
+	Paths     []DirnameEntry `xml:"entry,omitempty" json:"e"`
+	Timestamp int64          `xml:"timestamp,attr" json:"t"`
+	Errors    []DirnameError `xml:"error,omitempty" json:"err"`
 }
 
 func (*DirnameResult) isDirnameResult() {}
 
 type DirnameEntry struct {
-	XMLName xml.Name `xml:"entry"`
-	Path    string   `xml:"path,attr"`
-	Dir     string   `xml:"dir,attr"`
+	XMLName xml.Name `xml:"entry" json:"-"`
+	Path    string   `xml:"path,attr" json:"p"`
+	Dir     string   `xml:"dir,attr" json:"dir"`
 }
 
 type DirnameError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -84,8 +96,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -99,14 +113,33 @@ func parseFlags(args []string) (Config, []string) {
 }
 
 func outputResult(result *DirnameResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("dirname")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

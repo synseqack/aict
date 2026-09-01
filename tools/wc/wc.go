@@ -20,6 +20,25 @@ import (
 func init() {
 	tool.Register("wc", Run)
 	tool.RegisterMeta("wc", tool.GenerateSchema("wc", "Count lines, words, and bytes in files", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"ln": "lines",
+		"wd": "words",
+		"by": "bytes",
+		"ml": "max_line_len",
+		"lang":"language",
+		"f":  "file",
+		"tl": "total_lines",
+		"tw": "total_words",
+		"tb": "total_bytes",
+		"t":  "timestamp",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("wc", dict)
 }
 
 type Config struct {
@@ -32,38 +51,39 @@ type Config struct {
 	JSON     bool
 	Plain    bool
 	Pretty   bool
-	Compact bool
+	NoCompact bool
+	Dict     bool
 }
 
 type WCResult struct {
-	XMLName    xml.Name  `xml:"wc"`
-	Files      []WCFile  `xml:"file"`
-	TotalLines int64     `xml:"total_lines,attr"`
-	TotalWords int64     `xml:"total_words,attr"`
-	TotalBytes int64     `xml:"total_bytes,attr"`
-	Timestamp  int64     `xml:"timestamp,attr"`
-	Errors     []WCError `xml:"error,omitempty"`
+	XMLName    xml.Name  `xml:"wc" json:"-"`
+	Files      []WCFile  `xml:"file" json:"f"`
+	TotalLines int64     `xml:"total_lines,attr" json:"tl"`
+	TotalWords int64     `xml:"total_words,attr" json:"tw"`
+	TotalBytes int64     `xml:"total_bytes,attr" json:"tb"`
+	Timestamp  int64     `xml:"timestamp,attr" json:"t"`
+	Errors     []WCError `xml:"error,omitempty" json:"e"`
 }
 
 func (*WCResult) isWCResult() {}
 
 type WCFile struct {
-	XMLName    xml.Name  `xml:"file"`
-	Path       string    `xml:"path,attr"`
-	Absolute   string    `xml:"absolute,attr"`
-	Lines      int64     `xml:"lines,attr"`
-	Words      int64     `xml:"words,attr"`
-	Bytes      int64     `xml:"bytes,attr"`
-	MaxLineLen int64     `xml:"max_line_len,attr"`
-	Language   string    `xml:"language,attr"`
-	Errors     []WCError `xml:"error,omitempty"`
+	XMLName    xml.Name  `xml:"file" json:"-"`
+	Path       string    `xml:"path,attr" json:"p"`
+	Absolute   string    `xml:"absolute,attr" json:"a"`
+	Lines      int64     `xml:"lines,attr" json:"ln"`
+	Words      int64     `xml:"words,attr" json:"wd"`
+	Bytes      int64     `xml:"bytes,attr" json:"by"`
+	MaxLineLen int64     `xml:"max_line_len,attr" json:"ml"`
+	Language   string    `xml:"language,attr" json:"lang"`
+	Errors     []WCError `xml:"error,omitempty" json:"e"`
 }
 
 type WCError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -119,8 +139,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -246,14 +268,33 @@ func countWords(s string) int64 {
 }
 
 func outputResult(result *WCResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("wc")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

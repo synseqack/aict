@@ -26,6 +26,13 @@ func init() {
 	tool.RegisterMeta("sha256sum", tool.GenerateSchema("sha256sum", "Calculate SHA256 checksum for files", Config{}))
 	tool.Register("sha1sum", RunSHA1)
 	tool.RegisterMeta("sha1sum", tool.GenerateSchema("sha1sum", "Calculate SHA1 checksum for files", Config{}))
+	xmlout.RegisterDict("checksums", map[string]string{
+		"ab": "absolute",
+		"sb": "size_bytes",
+		"m5": "md5",
+		"s1": "sha1",
+		"s2": "sha256",
+	})
 }
 
 type Config struct {
@@ -35,33 +42,34 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	Compact bool
+	Dict       bool
+	NoCompact  bool
 }
 
 type ChecksumResult struct {
-	XMLName   xml.Name        `xml:"checksums"`
-	Timestamp int64           `xml:"timestamp,attr"`
-	Files     []ChecksumFile  `xml:"file,omitempty"`
-	Errors    []ChecksumError `xml:"error,omitempty"`
+	XMLName   xml.Name        `xml:"checksums" json:"-"`
+	Timestamp int64           `xml:"timestamp,attr" json:"t"`
+	Files     []ChecksumFile  `xml:"file,omitempty" json:"files,omitempty"`
+	Errors    []ChecksumError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*ChecksumResult) isChecksumResult() {}
 
 type ChecksumFile struct {
-	XMLName   xml.Name `xml:"file"`
-	Path      string   `xml:"path,attr"`
-	Absolute  string   `xml:"absolute,attr"`
-	SizeBytes int64    `xml:"size_bytes,attr"`
-	MD5       string   `xml:"md5,attr"`
-	SHA1      string   `xml:"sha1,attr"`
-	SHA256    string   `xml:"sha256,attr"`
+	XMLName   xml.Name `xml:"file" json:"-"`
+	Path      string   `xml:"path,attr" json:"p"`
+	Absolute  string   `xml:"absolute,attr" json:"ab"`
+	SizeBytes int64    `xml:"size_bytes,attr" json:"sb"`
+	MD5       string   `xml:"md5,attr" json:"m5"`
+	SHA1      string   `xml:"sha1,attr" json:"s1"`
+	SHA256    string   `xml:"sha256,attr" json:"s2"`
 }
 
 type ChecksumError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error      { return runWithAlgos(args, []string{"md5", "sha1", "sha256"}) }
@@ -71,6 +79,29 @@ func RunSHA1(args []string) error   { return runWithAlgos(args, []string{"sha1"}
 
 func runWithAlgos(args []string, defaultAlgos []string) error {
 	cfg, paths := parseFlags(args, defaultAlgos)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("checksums")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	if len(paths) == 0 {
 		return outputResult(&ChecksumResult{Timestamp: meta.Now()}, cfg)
@@ -116,8 +147,10 @@ func parseFlags(args []string, defaultAlgos []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -193,10 +226,7 @@ func calculateChecksums(path string, cfg Config) (ChecksumFile, error) {
 
 func outputResult(result *ChecksumResult, cfg Config) error {
 	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)

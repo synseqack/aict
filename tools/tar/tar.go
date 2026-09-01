@@ -21,50 +21,82 @@ import (
 func init() {
 	tool.Register("tar", Run)
 	tool.RegisterMeta("tar", tool.GenerateSchema("tar", "List or extract contents from tar archives (.tar, .tar.gz, .tgz, .tar.bz2)", Config{}))
+	xmlout.RegisterDict("tar", map[string]string{
+		"ab": "absolute",
+		"sb": "size_bytes",
+		"sh": "size_human",
+		"m": "modified",
+		"lt": "link_target",
+	})
 }
 
 type Config struct {
-	List    bool   `flag:"" desc:"List archive contents"`
-	Extract string `flag:"" desc:"Extract a specific file path from the archive to stdout"`
-	XML     bool
-	JSON    bool
-	Plain   bool
-	Pretty  bool
+	List      bool   `flag:"" desc:"List archive contents"`
+	Extract   string `flag:"" desc:"Extract a specific file path from the archive to stdout"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type TarResult struct {
-	XMLName   xml.Name   `xml:"tar"`
-	Archive   string     `xml:"archive,attr"`
-	Absolute  string     `xml:"absolute,attr"`
-	Format    string     `xml:"format,attr"`
-	Entries   int        `xml:"entries,attr"`
-	Timestamp int64      `xml:"timestamp,attr"`
-	Files     []TarFile  `xml:"file,omitempty"`
-	Errors    []TarError `xml:"error,omitempty"`
+	XMLName   xml.Name   `xml:"tar" json:"-"`
+	Archive   string     `xml:"archive,attr" json:"ar"`
+	Absolute  string     `xml:"absolute,attr" json:"ab"`
+	Format    string     `xml:"format,attr" json:"f"`
+	Entries   int        `xml:"entries,attr" json:"e"`
+	Timestamp int64      `xml:"timestamp,attr" json:"t"`
+	Files     []TarFile  `xml:"file,omitempty" json:"files,omitempty"`
+	Errors    []TarError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*TarResult) isTarResult() {}
 
 type TarFile struct {
-	XMLName   xml.Name `xml:"file"`
-	Path      string   `xml:"path,attr"`
-	SizeBytes int64    `xml:"size_bytes,attr"`
-	SizeHuman string   `xml:"size_human,attr"`
-	Modified  string   `xml:"modified,attr"`
-	Type      string   `xml:"type,attr"`
-	Mode      string   `xml:"mode,attr"`
-	LinkTarget string  `xml:"link_target,attr,omitempty"`
+	XMLName   xml.Name `xml:"file" json:"-"`
+	Path      string   `xml:"path,attr" json:"p"`
+	SizeBytes int64    `xml:"size_bytes,attr" json:"sb"`
+	SizeHuman string   `xml:"size_human,attr" json:"sh"`
+	Modified  string   `xml:"modified,attr" json:"m"`
+	Type      string   `xml:"type,attr" json:"tp"`
+	Mode      string   `xml:"mode,attr" json:"mo"`
+	LinkTarget string  `xml:"link_target,attr,omitempty" json:"lt,omitempty"`
 }
 
 type TarError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
 	cfg, paths := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("tar")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	if len(paths) == 0 {
 		return outputResult(&TarResult{
@@ -175,6 +207,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)

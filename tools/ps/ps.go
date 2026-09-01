@@ -19,6 +19,29 @@ import (
 func init() {
 	tool.Register("ps", Run)
 	tool.RegisterMeta("ps", tool.GenerateSchema("ps", "List running processes with details", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"p":  "process",
+		"pid":"pid",
+		"ppid":"ppid",
+		"usr":"user",
+		"uid":"uid",
+		"st": "state",
+		"sd": "state_desc",
+		"cpu":"cpu_pct",
+		"mem":"mem_pct",
+		"vsz":"vsz_kb",
+		"rss":"rss_kb",
+		"start":"started",
+		"cmd":"command",
+		"args":"args",
+		"ep": "exe",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("ps", dict)
 }
 
 type Config struct {
@@ -30,40 +53,41 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type PsResult struct {
-	XMLName   xml.Name  `xml:"ps"`
-	Timestamp int64     `xml:"timestamp,attr"`
-	Processes []Process `xml:"process,omitempty"`
-	Errors    []PsError `xml:"error,omitempty"`
+	XMLName   xml.Name  `xml:"ps" json:"-"`
+	Timestamp int64     `xml:"timestamp,attr" json:"t"`
+	Processes []Process `xml:"process,omitempty" json:"p"`
+	Errors    []PsError `xml:"error,omitempty" json:"e"`
 }
 
 func (*PsResult) isPsResult() {}
 
 type Process struct {
-	XMLName   xml.Name `xml:"process"`
-	PID       int      `xml:"pid,attr"`
-	PPID      int      `xml:"ppid,attr"`
-	User      string   `xml:"user,attr"`
-	UID       string   `xml:"uid,attr"`
-	State     string   `xml:"state,attr"`
-	StateDesc string   `xml:"state_desc,attr"`
-	CPUPct    float64  `xml:"cpu_pct,attr"`
-	MemPct    float64  `xml:"mem_pct,attr"`
-	VSZKB     int64    `xml:"vsz_kb,attr"`
-	RSSKB     int64    `xml:"rss_kb,attr"`
-	Started   string   `xml:"started,attr"`
-	Command   string   `xml:"command,attr"`
-	Args      string   `xml:"args,attr"`
-	Exe       string   `xml:"exe,attr"`
+	XMLName   xml.Name `xml:"process" json:"-"`
+	PID       int      `xml:"pid,attr" json:"pid"`
+	PPID      int      `xml:"ppid,attr" json:"ppid"`
+	User      string   `xml:"user,attr" json:"usr"`
+	UID       string   `xml:"uid,attr" json:"uid"`
+	State     string   `xml:"state,attr" json:"st"`
+	StateDesc string   `xml:"state_desc,attr" json:"sd"`
+	CPUPct    float64  `xml:"cpu_pct,attr" json:"cpu"`
+	MemPct    float64  `xml:"mem_pct,attr" json:"mem"`
+	VSZKB     int64    `xml:"vsz_kb,attr" json:"vsz"`
+	RSSKB     int64    `xml:"rss_kb,attr" json:"rss"`
+	Started   string   `xml:"started,attr" json:"start"`
+	Command   string   `xml:"command,attr" json:"cmd"`
+	Args      string   `xml:"args,attr" json:"args"`
+	Exe       string   `xml:"exe,attr" json:"ep"`
 }
 
 type PsError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -103,8 +127,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -256,14 +282,33 @@ func getUsername(uid string) string {
 }
 
 func outputResult(result *PsResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("ps")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

@@ -178,7 +178,9 @@ func TestHead_MultipleFiles(t *testing.T) {
 	file2 := createFile(t, dir, "b.txt", "111\n222")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	_, err := runHead([]string{file1, file2})
 	if err != nil {
@@ -191,7 +193,9 @@ func TestHead_XMLValidity(t *testing.T) {
 	filePath := createFile(t, dir, "test.txt", "line1\nline2\nline3")
 
 	os.Setenv("AICT_XML", "1")
+	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
+	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

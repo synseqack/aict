@@ -17,6 +17,14 @@ import (
 func init() {
 	tool.Register("git", Run)
 	tool.RegisterMeta("git", tool.GenerateSchema("git", "Run git subcommands (status, diff, log, ls-files, blame)", Config{}))
+	xmlout.RegisterDict("git", map[string]string{
+		"sc": "subcommand",
+		"st": "status",
+		"sh": "short_hash",
+		"ad": "author_date",
+		"da": "author_date_ago_s",
+		"ln": "line_num",
+	})
 }
 
 type Config struct {
@@ -25,66 +33,90 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	Compact bool
+	Dict       bool
+	NoCompact  bool
 }
 
 type GitResult struct {
-	XMLName   xml.Name   `xml:"git"`
-	Timestamp int64      `xml:"timestamp,attr"`
-	Subcmd    string     `xml:"subcommand,attr"`
-	Status    []Status   `xml:"status>file,omitempty"`
-	Files     []File     `xml:"files>file,omitempty"`
-	Log       []Commit   `xml:"log>commit,omitempty"`
-	Blame     []Blame    `xml:"blame>line,omitempty"`
-	Errors    []GitError `xml:"error,omitempty"`
+	XMLName   xml.Name   `xml:"git" json:"-"`
+	Timestamp int64      `xml:"timestamp,attr" json:"t"`
+	Subcmd    string     `xml:"subcommand,attr" json:"sc"`
+	Status    []Status   `xml:"status>file,omitempty" json:"status,omitempty"`
+	Files     []File     `xml:"files>file,omitempty" json:"files,omitempty"`
+	Log       []Commit   `xml:"log>commit,omitempty" json:"log,omitempty"`
+	Blame     []Blame    `xml:"blame>line,omitempty" json:"blame,omitempty"`
+	Errors    []GitError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*GitResult) isGitResult() {}
 
 type GitError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"m"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 type Status struct {
-	XMLName  xml.Name `xml:"file"`
-	Path     string   `xml:"path,attr"`
-	Status   string   `xml:"status,attr"`
-	Original string   `xml:"original,attr,omitempty"`
+	XMLName  xml.Name `xml:"file" json:"-"`
+	Path     string   `xml:"path,attr" json:"p"`
+	Status   string   `xml:"status,attr" json:"st"`
+	Original string   `xml:"original,attr,omitempty" json:"o,omitempty"`
 }
 
 type File struct {
-	XMLName xml.Name `xml:"file"`
-	Path    string   `xml:"path,attr"`
-	Mode    string   `xml:"mode,attr,omitempty"`
-	Blob    string   `xml:"blob,attr,omitempty"`
+	XMLName xml.Name `xml:"file" json:"-"`
+	Path    string   `xml:"path,attr" json:"p"`
+	Mode    string   `xml:"mode,attr,omitempty" json:"mo,omitempty"`
+	Blob    string   `xml:"blob,attr,omitempty" json:"b,omitempty"`
 }
 
 type Commit struct {
-	XMLName    xml.Name `xml:"commit"`
-	Hash       string   `xml:"hash,attr"`
-	ShortHash  string   `xml:"short_hash,attr"`
-	Author     string   `xml:"author,attr"`
-	AuthorDate int64    `xml:"author_date,attr"`
-	DateAgo    int64    `xml:"author_date_ago_s,attr"`
-	Message    string   `xml:"message,attr"`
-	Files      []string `xml:"files>file,omitempty"`
+	XMLName    xml.Name `xml:"commit" json:"-"`
+	Hash       string   `xml:"hash,attr" json:"h"`
+	ShortHash  string   `xml:"short_hash,attr" json:"sh"`
+	Author     string   `xml:"author,attr" json:"a"`
+	AuthorDate int64    `xml:"author_date,attr" json:"ad"`
+	DateAgo    int64    `xml:"author_date_ago_s,attr" json:"da"`
+	Message    string   `xml:"message,attr" json:"mg"`
+	Files      []string `xml:"files>file,omitempty" json:"fs,omitempty"`
 }
 
 type Blame struct {
-	XMLName    xml.Name `xml:"line"`
-	LineNum    int      `xml:"line_num,attr"`
-	Commit     string   `xml:"commit,attr"`
-	Author     string   `xml:"author,attr"`
-	AuthorDate int64    `xml:"author_date,attr"`
-	DateAgo    int64    `xml:"author_date_ago_s,attr"`
-	Content    string   `xml:"content,attr"`
+	XMLName    xml.Name `xml:"line" json:"-"`
+	LineNum    int      `xml:"line_num,attr" json:"ln"`
+	Commit     string   `xml:"commit,attr" json:"c"`
+	Author     string   `xml:"author,attr" json:"a"`
+	AuthorDate int64    `xml:"author_date,attr" json:"ad"`
+	DateAgo    int64    `xml:"author_date_ago_s,attr" json:"da"`
+	Content    string   `xml:"content,attr" json:"ct"`
 }
 
 func Run(args []string) error {
 	cfg, subcmd, subArgs := parseFlags(args)
+
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("git")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
+	}
 
 	if subcmd == "" {
 		return fmt.Errorf("git subcommand required: status, diff, log, ls-files, blame, show")
@@ -135,8 +167,10 @@ func parseFlags(args []string) (Config, string, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--dict":
+			cfg.Dict = true
+		case "--no-compact":
+			cfg.NoCompact = true
 		default:
 			if subcmd == "" && (arg == "status" || arg == "diff" || arg == "log" || arg == "ls-files" || arg == "blame" || arg == "show") {
 				subcmd = arg
@@ -416,10 +450,7 @@ func gitShow(args []string) (*GitResult, error) {
 
 func outputResult(result *GitResult, cfg Config) error {
 	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)

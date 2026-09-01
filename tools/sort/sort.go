@@ -18,6 +18,19 @@ import (
 func init() {
 	tool.Register("sort", Run)
 	tool.RegisterMeta("sort", tool.GenerateSchema("sort", "Sort lines of text files", Config{}))
+
+	dict := map[string]string{
+		"t":  "timestamp",
+		"lin":"lines_in",
+		"lout":"lines_out",
+		"k":  "key",
+		"ord":"order",
+		"ct": "content",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("sort", dict)
 }
 
 type Config struct {
@@ -31,26 +44,27 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	Compact bool
+	NoCompact bool
+	Dict       bool
 }
 
 type SortResult struct {
-	XMLName   xml.Name    `xml:"sort"`
-	Timestamp int64       `xml:"timestamp,attr"`
-	LinesIn   int         `xml:"lines_in,attr"`
-	LinesOut  int         `xml:"lines_out,attr"`
-	KeyField  int         `xml:"key,attr"`
-	Order     string      `xml:"order,attr"`
-	Content   string      `xml:"content,omitempty"`
-	Errors    []SortError `xml:"error,omitempty"`
+	XMLName   xml.Name    `xml:"sort" json:"-"`
+	Timestamp int64       `xml:"timestamp,attr" json:"t"`
+	LinesIn   int         `xml:"lines_in,attr" json:"lin"`
+	LinesOut  int         `xml:"lines_out,attr" json:"lout"`
+	KeyField  int         `xml:"key,attr" json:"k"`
+	Order     string      `xml:"order,attr" json:"ord"`
+	Content   string      `xml:"content,omitempty" json:"ct"`
+	Errors    []SortError `xml:"error,omitempty" json:"e"`
 }
 
 func (*SortResult) isSortResult() {}
 
 type SortError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
 }
 
 func Run(args []string) error {
@@ -147,8 +161,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -278,14 +294,33 @@ func sortStdin(cfg Config) error {
 }
 
 func outputResult(result *SortResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("sort")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

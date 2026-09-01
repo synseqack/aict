@@ -17,6 +17,22 @@ import (
 func init() {
 	tool.Register("file", Run)
 	tool.RegisterMeta("file", tool.GenerateSchema("file", "Determine file type using MIME detection and content analysis", Config{}))
+
+	dict := map[string]string{
+		"p":  "path",
+		"a":  "absolute",
+		"ty": "type",
+		"mime":"mime",
+		"cat":"category",
+		"lang":"language",
+		"chs":"charset",
+		"exe":"executable",
+		"t":  "timestamp",
+		"e":  "error",
+		"c":  "code",
+		"msg":"msg",
+	}
+	xmlout.RegisterDict("file", dict)
 }
 
 type Config struct {
@@ -26,30 +42,31 @@ type Config struct {
 	JSON   bool
 	Plain  bool
 	Pretty bool
-	Compact bool
+	NoCompact bool
+	Dict   bool
 }
 
 type FileResult struct {
-	XMLName    xml.Name    `xml:"file"`
-	Path       string      `xml:"path,attr"`
-	Absolute   string      `xml:"absolute,attr"`
-	Type       string      `xml:"type,attr"`
-	MIME       string      `xml:"mime,attr"`
-	Category   string      `xml:"category,attr"`
-	Language   string      `xml:"language,attr"`
-	Charset    string      `xml:"charset,attr"`
-	Executable string      `xml:"executable,attr"`
-	Timestamp  int64       `xml:"timestamp,attr"`
-	Errors     []FileError `xml:"error,omitempty"`
+	XMLName    xml.Name    `xml:"file" json:"-"`
+	Path       string      `xml:"path,attr" json:"p"`
+	Absolute   string      `xml:"absolute,attr" json:"a"`
+	Type       string      `xml:"type,attr" json:"ty"`
+	MIME       string      `xml:"mime,attr" json:"mime"`
+	Category   string      `xml:"category,attr" json:"cat"`
+	Language   string      `xml:"language,attr" json:"lang"`
+	Charset    string      `xml:"charset,attr" json:"chs"`
+	Executable string      `xml:"executable,attr" json:"exe"`
+	Timestamp  int64       `xml:"timestamp,attr" json:"t"`
+	Errors     []FileError `xml:"error,omitempty" json:"e"`
 }
 
 func (*FileResult) isFileResult() {}
 
 type FileError struct {
-	XMLName xml.Name `xml:"error"`
-	Code    int      `xml:"code,attr"`
-	Msg     string   `xml:"msg,attr"`
-	Path    string   `xml:"path,attr"`
+	XMLName xml.Name `xml:"error" json:"-"`
+	Code    int      `xml:"code,attr" json:"c"`
+	Msg     string   `xml:"msg,attr" json:"msg"`
+	Path    string   `xml:"path,attr" json:"p"`
 }
 
 func Run(args []string) error {
@@ -92,8 +109,10 @@ func parseFlags(args []string) (Config, []string) {
 			cfg.Plain = true
 		case "--pretty", "-pretty":
 			cfg.Pretty = true
-		case "--compact", "-compact":
-			cfg.Compact = true
+		case "--no-compact":
+			cfg.NoCompact = true
+		case "--dict":
+			cfg.Dict = true
 		default:
 			positional = append(positional, arg)
 		}
@@ -252,14 +271,33 @@ func getType(category, language string, executable bool) string {
 }
 
 func outputResult(result *FileResult, cfg Config) error {
-	if cfg.JSON {
-		if cfg.Compact {
-		return xmlout.WriteJSONCompact(os.Stdout, result)
-	}
-	return xmlout.WriteJSON(os.Stdout, result)
+	if cfg.Dict {
+		dict := xmlout.GetRegisteredDict("file")
+		if dict != nil {
+			var keys []string
+			for short := range dict {
+				keys = append(keys, short)
+			}
+			for i := 0; i < len(keys); i++ {
+				for j := i + 1; j < len(keys); j++ {
+					if keys[i] > keys[j] {
+						keys[i], keys[j] = keys[j], keys[i]
+					}
+				}
+			}
+			fmt.Print("<dict>")
+			for _, short := range keys {
+				fmt.Printf("<%s>%s</%s>", short, dict[short], short)
+			}
+			fmt.Println("</dict>")
+		}
+		return nil
 	}
 	if cfg.Plain {
 		return writePlain(os.Stdout, result, cfg)
+	}
+	if cfg.JSON {
+		return xmlout.WriteJSON(os.Stdout, result)
 	}
 	return xmlout.WriteXML(os.Stdout, result, cfg.Pretty)
 }

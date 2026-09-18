@@ -3,6 +3,7 @@ package xmlout
 import (
 	"encoding/json"
 	"encoding/xml"
+	"strconv"
 	"testing"
 )
 
@@ -51,14 +52,17 @@ func TestBool_MarshalJSON(t *testing.T) {
 	// JSON is native regardless of compact mode.
 	for _, mode := range []bool{true, false} {
 		compactBools = mode
-		got, err := json.Marshal(struct {
-			A Bool `json:"a"`
-		}{A: true})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(got) != `{"a":true}` {
-			t.Errorf("compactBools=%v: got %s, want {\"a\":true}", mode, got)
+		for _, val := range []bool{true, false} {
+			got, err := json.Marshal(struct {
+				A Bool `json:"a"`
+			}{A: Bool(val)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := `{"a":` + strconv.FormatBool(val) + `}`
+			if string(got) != want {
+				t.Errorf("compactBools=%v, val=%v: got %s, want %s", mode, val, got, want)
+			}
 		}
 	}
 }

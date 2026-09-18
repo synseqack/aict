@@ -35,9 +35,8 @@ func TestWriteXML_ValueNamedTrueSurvivesCompaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	// Attribute NAMES may compact (name -> n, since this fixture has no
-	// registered dict and extractAttrMapping derives the short name from the
-	// json tag); the VALUES must not. Assert on the value, not the spelling.
+	// Attribute NAMES may compact; the VALUES must not. Assert on the value,
+	// not the attribute spelling.
 	for _, want := range []string{`true"`, `false"`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("value %q was corrupted: %s", want, out)

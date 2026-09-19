@@ -129,6 +129,22 @@ The agent can parse `<error>` elements programmatically without regex.
 3. **Use `--maxdepth` in find** — limits directory traversal
 4. **Use `aict grep` over `rg` when you need structured results** — `rg` is faster but returns plain text
 
+## ripgrep acceleration for grep
+
+When ripgrep is installed and on `PATH`, `aict grep` hands the search to
+`rg --json` and re-emits the result in aict's own schema. Which files are
+searched, which are skipped as binary, the match counts, and every emitted
+field stay identical to the built-in engine — ripgrep only supplies the
+matching itself. `aict doctor` reports whether ripgrep was found.
+
+Searches using context flags (`-A`, `-B`, `-C`) always use the built-in
+engine, because ripgrep reports surrounding lines as separate messages that
+cannot be mapped onto aict's `before`/`after` fields without diverging.
+
+Set `AICT_NORG=1` to disable the integration and always use the built-in
+engine. If ripgrep fails outright, `aict grep` falls back to it silently
+rather than reporting an error.
+
 ## Shell Completion
 
 ```bash

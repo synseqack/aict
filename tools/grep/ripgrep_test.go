@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,7 +24,14 @@ const stubSource = "testdata/stubrg"
 func buildStub(t *testing.T) string {
 	t.Helper()
 
-	bin := filepath.Join(t.TempDir(), "rg")
+	// An explicit -o name keeps exactly that name, so on Windows the .exe
+	// has to be spelled out: exec.LookPath will not resolve a bare "rg"
+	// against a file with no extension.
+	exe := "rg"
+	if runtime.GOOS == "windows" {
+		exe = "rg.exe"
+	}
+	bin := filepath.Join(t.TempDir(), exe)
 	out, err := exec.Command("go", "build", "-o", bin, "./"+stubSource).CombinedOutput()
 	if err != nil {
 		t.Fatalf("build stub rg: %v\n%s", err, out)

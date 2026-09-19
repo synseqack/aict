@@ -410,7 +410,10 @@ func TestChecksums_VerifyMissingFile(t *testing.T) {
 	if len(result.Errors) != 1 {
 		t.Fatalf("expected 1 error for the unreadable entry, got %d", len(result.Errors))
 	}
-	if !strings.Contains(result.Errors[0].Msg, "no such file") {
+	// The message is the OS's open error verbatim, so assert it names the
+	// unreadable entry rather than matching a Unix-only phrase: Windows says
+	// "The system cannot find the file specified."
+	if !strings.Contains(result.Errors[0].Msg, filepath.Join(dir, "gone.txt")) {
 		t.Errorf("error message = %q", result.Errors[0].Msg)
 	}
 	if len(result.Verified) != 0 {

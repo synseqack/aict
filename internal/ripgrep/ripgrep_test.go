@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -177,16 +178,28 @@ func writeStub(t *testing.T, body string, exitCode int) {
 		t.Fatalf("write body: %v", err)
 	}
 
-	script := "#!/bin/sh\n" +
-		`if [ "$1" = "--version" ]; then echo "ripgrep 14.1.1"; exit 0; fi` + "\n" +
-		`cat "$STUB_BODY"` + "\n" +
-		"exit " + strconv.Itoa(exitCode) + "\n"
-	stub := filepath.Join(dir, "rg")
-	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
-		t.Fatalf("write stub: %v", err)
+	t.Setenv("STUB_BODY", bodyFile)
+
+	if runtime.GOOS == "windows" {
+		// cmd.exe needs a .bat for LookPath to resolve a bare "rg", and it
+		// cannot run a #!/bin/sh script.
+		script := "@echo off\r\n" +
+			`if "%~1"=="--version" ( echo ripgrep 14.1.1 & exit /b 0 )` + "\r\n" +
+			`type "%STUB_BODY%"` + "\r\n" +
+			"exit /b " + strconv.Itoa(exitCode) + "\r\n"
+		if err := os.WriteFile(filepath.Join(dir, "rg.bat"), []byte(script), 0o644); err != nil {
+			t.Fatalf("write stub: %v", err)
+		}
+	} else {
+		script := "#!/bin/sh\n" +
+			`if [ "$1" = "--version" ]; then echo "ripgrep 14.1.1"; exit 0; fi` + "\n" +
+			`cat "$STUB_BODY"` + "\n" +
+			"exit " + strconv.Itoa(exitCode) + "\n"
+		if err := os.WriteFile(filepath.Join(dir, "rg"), []byte(script), 0o755); err != nil {
+			t.Fatalf("write stub: %v", err)
+		}
 	}
 
-	t.Setenv("STUB_BODY", bodyFile)
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 

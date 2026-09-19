@@ -35,6 +35,7 @@ func init() {
 		"lang": "language",
 		"mime": "mime",
 		"ty":   "type",
+		"v":    "value",
 		"cond": "condition",
 		"neg":  "negated",
 		"md":   "maxdepth",
@@ -86,10 +87,10 @@ type FindResult struct {
 func (*FindResult) isFindResult() {}
 
 type FindCondition struct {
-	XMLName xml.Name    `xml:"condition"`
-	Type    string      `xml:"type,attr"`
-	Value   string      `xml:"value,attr"`
-	Negated xmlout.Bool `xml:"negated,attr,omitempty"`
+	XMLName xml.Name    `xml:"condition" json:"-"`
+	Type    string      `xml:"type,attr" json:"ty"`
+	Value   string      `xml:"value,attr" json:"v"`
+	Negated xmlout.Bool `xml:"negated,attr,omitempty" json:"neg"`
 }
 
 type FindFile struct {

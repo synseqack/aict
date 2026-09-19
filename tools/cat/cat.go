@@ -239,6 +239,8 @@ func readFileContent(path string) (encoding string, content string, lines int, e
 		return "binary", "", 0, nil
 	}
 
+	// Plain UTF-8 is the default; only a BOM upgrades it.
+	encoding = "utf-8"
 	if n >= 3 && header[0] == 0xEF && header[1] == 0xBB && header[2] == 0xBF {
 		encoding = "utf-8-bom"
 	}

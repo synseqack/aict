@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/synseqack/aict/internal/testutil"
@@ -23,9 +24,7 @@ func runFind(t *testing.T, args []string) *FindResult {
 	t.Helper()
 	os.Setenv("AICT_XML", "1")
 	os.Setenv("AICT_NOCOMPACT", "1")
-	os.Setenv("AICT_NOCOMPACT", "1")
 	defer os.Unsetenv("AICT_XML")
-	defer os.Unsetenv("AICT_NOCOMPACT")
 	defer os.Unsetenv("AICT_NOCOMPACT")
 
 	oldStdout := os.Stdout
@@ -245,5 +244,35 @@ func TestFind_SpecialChars(t *testing.T) {
 
 	if len(result.Matches) < 2 {
 		t.Errorf("expected at least 2 entries, got %d", len(result.Matches))
+	}
+}
+
+// The echoed condition's JSON keys are part of the documented schema and the
+// --dict table: they must be ty/v/neg, not the Go field names FindCondition
+// had before it gained json tags.
+func TestFind_ConditionJSONKeys(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "a.txt", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	Run([]string{dir, "-name", "*.txt", "-json"})
+	w.Close()
+	os.Stdout = oldStdout
+
+	var out bytes.Buffer
+	out.ReadFrom(r)
+
+	outStr := out.String()
+	for _, want := range []string{`"ty": "name"`, `"v": "*.txt"`, `"neg": false`} {
+		if !strings.Contains(outStr, want) {
+			t.Errorf("expected %s in JSON output, got: %s", want, outStr)
+		}
+	}
+	for _, unwanted := range []string{`"Type":`, `"Value":`, `"Negated":`} {
+		if strings.Contains(outStr, unwanted) {
+			t.Errorf("JSON output must not use Go field name %s, got: %s", unwanted, outStr)
+		}
 	}
 }

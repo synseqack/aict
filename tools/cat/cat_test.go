@@ -196,3 +196,34 @@ func TestCat_XMLValidity(t *testing.T) {
 		t.Errorf("expected root element 'cat', got %q", result.XMLName.Local)
 	}
 }
+
+// A plain UTF-8 file has no BOM, but its encoding is utf-8, not the empty
+// string the named return defaulted to before the fix.
+func TestCat_PlainUTF8Encoding(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "plain.txt", "line one\nline two\n")
+
+	result, err := catFile(path, Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Encoding != "utf-8" {
+		t.Errorf("expected Encoding=utf-8, got %q", result.Encoding)
+	}
+}
+
+func TestCat_EmptyFileEncoding(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "empty.txt", "")
+
+	result, err := catFile(path, Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Encoding != "utf-8" {
+		t.Errorf("empty file expected Encoding=utf-8, got %q", result.Encoding)
+	}
+	if result.Binary {
+		t.Error("empty file should not be binary")
+	}
+}

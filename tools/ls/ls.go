@@ -28,12 +28,12 @@ func init() {
 	// Register dictionary for compact output
 	dict := map[string]string{
 		// LSResult
-		"p":  "path",
-		"a":  "absolute",
-		"n":  "total_entries",
-		"h":  "hidden",
-		"r":  "recursive",
-		"t":  "timestamp",
+		"p":   "path",
+		"a":   "absolute",
+		"n":   "total_entries",
+		"h":   "hidden",
+		"r":   "recursive",
+		"t":   "timestamp",
 		"ent": "entries",
 		"err": "error",
 		// FileEntry
@@ -53,7 +53,7 @@ func init() {
 		"lang": "language",
 		"bin":  "binary",
 		// DirEntry
-		"d":   "directory",
+		"d": "directory",
 		// SymlinkEntry
 		"sy":  "symlink_entry",
 		"tgt": "target",
@@ -64,17 +64,17 @@ func init() {
 }
 
 type Config struct {
-	All        bool `flag:"" desc:"Show hidden files (starting with .)"`
-	AlmostAll  bool `flag:"" desc:"Show almost all (exclude . and ..)"`
-	SortTime   bool `flag:"" desc:"Sort by modification time, newest first"`
-	Reverse    bool `flag:"" desc:"Reverse sort order"`
-	Recursive  bool `flag:"" desc:"List subdirectories recursively"`
-	XML        bool
-	JSON       bool
-	Plain      bool
-	Pretty     bool
-	Dict       bool
-	NoCompact  bool
+	All       bool `flag:"" desc:"Show hidden files (starting with .)"`
+	AlmostAll bool `flag:"" desc:"Show almost all (exclude . and ..)"`
+	SortTime  bool `flag:"" desc:"Sort by modification time, newest first"`
+	Reverse   bool `flag:"" desc:"Reverse sort order"`
+	Recursive bool `flag:"" desc:"List subdirectories recursively"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
+	Dict      bool
+	NoCompact bool
 }
 
 type LSItem interface {

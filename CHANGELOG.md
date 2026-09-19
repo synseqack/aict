@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `xmlout.Bool`: a boolean type that emits `1`/`0` in compact XML, `true`/`false`
+  in verbose XML, and a native unquoted boolean under `--json` in every mode.
+- `internal/xml` tests asserting value preservation in compact mode and native
+  JSON booleans.
+
+### Changed
+- Boolean attributes in every tool's result structs are typed `xmlout.Bool`
+  instead of pre-formatted strings. **`--json` now emits real booleans
+  (`"binary": false`) rather than strings (`"binary": "false"`) — a behavior
+  change for `--json` consumers.** XML output in both compact and verbose mode
+  is otherwise unchanged byte-for-byte.
+
+### Fixed
+- Compact mode no longer rewrites attribute *values* that happen to read as
+  booleans. Previously the shortening pass replaced `="true"` globally, so a
+  file named `true` was listed as `name="1"`, a symlink targeting `true` became
+  `target="1"`, and grepping for the literal pattern `true` reported `p="1"`.
+  Only genuine boolean attributes compact now; values are intact in every mode.
+- Empty files are classified as text, not binary: `ls`, `cat`, and `file` now
+  report `mime="text/plain; charset=utf-8"` and `binary="false"` for them. A
+  zero-byte read returns `(0, io.EOF)`, which was being treated as a read error
+  and left the file classified as an opaque octet stream.
+
 ## [2.2.0] - 2026-09-01
 
 ### Added

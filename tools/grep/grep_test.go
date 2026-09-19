@@ -221,8 +221,9 @@ func TestGrep_EmptyFile(t *testing.T) {
 }
 
 func TestGrep_CompactPreservesBooleanValuedPattern(t *testing.T) {
+	prev := os.Getenv("AICT_NOCOMPACT")
 	os.Unsetenv("AICT_NOCOMPACT")
-	defer os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Setenv("AICT_NOCOMPACT", prev)
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f.txt")

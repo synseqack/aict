@@ -36,6 +36,21 @@ func TestLS_FIFODoesNotHang(t *testing.T) {
 		if got.res == nil {
 			t.Fatal("ls returned no result")
 		}
+		// Detection is skipped, so the FIFO keeps the defaults: an empty
+		// regular file is text, a non-regular file is not.
+		if len(got.res.Entries) != 1 {
+			t.Fatalf("want 1 entry, got %d", len(got.res.Entries))
+		}
+		entry, ok := got.res.Entries[0].(FileEntry)
+		if !ok {
+			t.Fatalf("want FileEntry, got %T", got.res.Entries[0])
+		}
+		if entry.MIME != "application/octet-stream" {
+			t.Errorf("FIFO mime = %q, want application/octet-stream", entry.MIME)
+		}
+		if !entry.Binary {
+			t.Error("FIFO should be binary, got text")
+		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("ls hung on a directory containing a FIFO")
 	}

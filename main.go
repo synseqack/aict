@@ -77,6 +77,13 @@ func run(args []string) error {
 		return mcpserver.Serve()
 	}
 
+	// --no-compact and AICT_NOCOMPACT are the same switch; the env var is what
+	// every tool's output path reads, so honour the flag once here rather than
+	// threading it through 31 packages.
+	if hasNoCompact(subArgs) {
+		os.Setenv("AICT_NOCOMPACT", "1")
+	}
+
 	tools := tool.All()
 	fn, ok := tools[toolName]
 	if !ok {
@@ -86,6 +93,15 @@ func run(args []string) error {
 	}
 
 	return fn(subArgs)
+}
+
+func hasNoCompact(args []string) bool {
+	for _, a := range args {
+		if a == "--no-compact" {
+			return true
+		}
+	}
+	return false
 }
 
 func printToolHelp(name string) {

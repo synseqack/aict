@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of pre-formatted strings. **`--json` now emits real booleans
   (`"binary": false`) rather than strings (`"binary": "false"`) — a behavior
   change for `--json` consumers.** XML output in both compact and verbose mode
-  is otherwise unchanged byte-for-byte.
+  is otherwise unchanged byte-for-byte, except for empty files, which now
+  correctly report `binary="false"` and a text MIME (see Fixed).
 
 ### Fixed
 - Compact mode no longer rewrites attribute *values* that happen to read as
@@ -30,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   report `mime="text/plain; charset=utf-8"` and `binary="false"` for them. A
   zero-byte read returns `(0, io.EOF)`, which was being treated as a read error
   and left the file classified as an opaque octet stream.
+- `ls` no longer hangs on non-regular files. A FIFO with no writer blocks
+  `os.Open` until one appears, so a single FIFO anywhere in a tree hung the
+  whole listing; content detection now runs only on regular files.
 
 ## [2.2.0] - 2026-09-01
 

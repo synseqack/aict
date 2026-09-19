@@ -122,7 +122,8 @@ func DetectFromFile(path string) (mime string, isBinary bool, err error) {
 	buf := make([]byte, 512)
 	n, readErr := f.Read(buf)
 	if readErr != nil && n == 0 {
-		return MIME(path), IsBinary(MIME(path)), nil
+		m := MIME(path)
+		return m, IsBinary(m), nil
 	}
 
 	mime = http.DetectContentType(buf[:n])

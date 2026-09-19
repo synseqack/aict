@@ -49,7 +49,7 @@ type DoctorResult struct {
 	GoVersion string        `xml:"go_version,attr" json:"gv"`
 	Checks    []Check       `xml:"check" json:"checks"`
 	Summary   string        `xml:"summary,attr" json:"su"`
-	AllPassed bool          `xml:"all_passed,attr" json:"ap"`
+	AllPassed xmlout.Bool   `xml:"all_passed,attr" json:"ap"`
 	Errors    []DoctorError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
@@ -162,7 +162,7 @@ func runDiagnostics() *DoctorResult {
 		}
 	}
 
-	result.AllPassed = errors == 0
+	result.AllPassed = xmlout.Bool(errors == 0)
 	result.Summary = fmt.Sprintf("%d passed, %d warnings, %d errors", passed, warnings, errors)
 
 	return result

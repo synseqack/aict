@@ -41,8 +41,8 @@ func TestRealpath_Basic(t *testing.T) {
 	if result.Absolute == "" {
 		t.Error("expected absolute path to be set")
 	}
-	if result.Exists != "true" {
-		t.Errorf("expected exists=true, got %s", result.Exists)
+	if !result.Exists {
+		t.Errorf("expected exists=true, got %v", result.Exists)
 	}
 	if result.Type != "file" {
 		t.Errorf("expected type 'file', got %s", result.Type)
@@ -71,8 +71,8 @@ func TestRealpath_NonExistent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if result.Exists != "false" {
-		t.Errorf("expected exists=false, got %s", result.Exists)
+	if result.Exists {
+		t.Errorf("expected exists=false, got %v", result.Exists)
 	}
 }
 

@@ -33,8 +33,8 @@ func TestCat_Text(t *testing.T) {
 	if result.Lines != 2 {
 		t.Errorf("expected 2 lines, got %d", result.Lines)
 	}
-	if result.Binary != "false" {
-		t.Errorf("expected Binary=false, got %q", result.Binary)
+	if result.Binary {
+		t.Errorf("expected Binary=false, got %v", result.Binary)
 	}
 	if result.Content != "line one\nline two\n" {
 		t.Errorf("unexpected content: %q", result.Content)
@@ -51,8 +51,8 @@ func TestCat_Binary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Binary != "true" {
-		t.Errorf("expected Binary=true for null-byte file, got %q", result.Binary)
+	if !result.Binary {
+		t.Errorf("expected Binary=true for null-byte file, got %v", result.Binary)
 	}
 	if result.Content != "" {
 		t.Errorf("expected empty Content for binary file, got %q", result.Content)

@@ -152,7 +152,7 @@ func TestFile_Executable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if result.Executable != "true" {
+	if !result.Executable {
 		t.Error("expected script.sh to be executable")
 	}
 }

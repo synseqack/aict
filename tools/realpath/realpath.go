@@ -49,11 +49,11 @@ type RealpathResult struct {
 func (*RealpathResult) isRealpathResult() {}
 
 type RealpathEntry struct {
-	XMLName  xml.Name `xml:"entry" json:"-"`
-	Path     string   `xml:"path,attr" json:"p"`
-	Absolute string   `xml:"absolute,attr" json:"a"`
-	Exists   string   `xml:"exists,attr" json:"ex"`
-	Type     string   `xml:"type,attr" json:"ty"`
+	XMLName  xml.Name    `xml:"entry" json:"-"`
+	Path     string      `xml:"path,attr" json:"p"`
+	Absolute string      `xml:"absolute,attr" json:"a"`
+	Exists   xmlout.Bool `xml:"exists,attr" json:"ex"`
+	Type     string      `xml:"type,attr" json:"ty"`
 }
 
 type RealpathError struct {
@@ -114,7 +114,7 @@ func resolvePath(path string) RealpathEntry {
 	if err != nil {
 		return RealpathEntry{
 			Path:   path,
-			Exists: "false",
+			Exists: false,
 			Type:   "unknown",
 		}
 	}
@@ -129,7 +129,7 @@ func resolvePath(path string) RealpathEntry {
 		return RealpathEntry{
 			Path:     path,
 			Absolute: real,
-			Exists:   "false",
+			Exists:   false,
 			Type:     "unknown",
 		}
 	}
@@ -146,7 +146,7 @@ func resolvePath(path string) RealpathEntry {
 	return RealpathEntry{
 		Path:     path,
 		Absolute: real,
-		Exists:   "true",
+		Exists:   true,
 		Type:     ftype,
 	}
 }

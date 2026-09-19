@@ -55,7 +55,7 @@ type FileResult struct {
 	Category   string      `xml:"category,attr" json:"cat"`
 	Language   string      `xml:"language,attr" json:"lang"`
 	Charset    string      `xml:"charset,attr" json:"chs"`
-	Executable string      `xml:"executable,attr" json:"exe"`
+	Executable xmlout.Bool `xml:"executable,attr" json:"exe"`
 	Timestamp  int64       `xml:"timestamp,attr" json:"t"`
 	Errors     []FileError `xml:"error,omitempty" json:"e"`
 }
@@ -159,7 +159,7 @@ func identifyFile(path string, cfg Config) (*FileResult, error) {
 		result.Type = "directory"
 		result.Category = "directory"
 		result.MIME = "inode/directory"
-		result.Executable = "false"
+		result.Executable = false
 		return result, nil
 	}
 
@@ -167,14 +167,14 @@ func identifyFile(path string, cfg Config) (*FileResult, error) {
 		result.Type = "symlink"
 		result.Category = "symlink"
 		result.MIME = "inode/symlink"
-		result.Executable = "false"
+		result.Executable = false
 		return result, nil
 	}
 
 	mime, isBinary, _ := detect.DetectFromFile(resolved.Absolute)
 	result.MIME = mime
 	exec := isExecutable(info.Mode())
-	result.Executable = fmt.Sprintf("%t", exec)
+	result.Executable = xmlout.Bool(exec)
 
 	lang := detect.LanguageFromFile(resolved.Absolute)
 	result.Language = lang

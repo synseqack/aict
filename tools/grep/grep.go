@@ -80,8 +80,8 @@ type GrepResult struct {
 	XMLName       xml.Name        `xml:"grep" json:"-"`
 	Pattern       string          `xml:"pattern,attr" json:"p"`
 	Flags         string          `xml:"flags,attr" json:"fl"`
-	Recursive     string          `xml:"recursive,attr" json:"r"`
-	CaseSensitive string          `xml:"case_sensitive,attr" json:"cs"`
+	Recursive     xmlout.Bool     `xml:"recursive,attr" json:"r"`
+	CaseSensitive xmlout.Bool     `xml:"case_sensitive,attr" json:"cs"`
 	MatchType     string          `xml:"match_type,attr" json:"mt"`
 	SearchedFiles int             `xml:"searched_files,attr" json:"sf"`
 	MatchedFiles  int             `xml:"matched_files,attr" json:"mf"`
@@ -268,8 +268,8 @@ func parseFlags(args []string) (Config, string) {
 func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *GrepResult {
 	result := &GrepResult{
 		Pattern:       cfg.Pattern,
-		Recursive:     strconv.FormatBool(cfg.Recursive),
-		CaseSensitive: strconv.FormatBool(!cfg.CaseInsensitive),
+		Recursive:     xmlout.Bool(cfg.Recursive),
+		CaseSensitive: xmlout.Bool(!cfg.CaseInsensitive),
 		SearchRoot:    givenPath,
 		Timestamp:     meta.Now(),
 	}
@@ -323,8 +323,8 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *GrepRe
 func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 	result := &GrepResult{
 		Pattern:       cfg.Pattern,
-		Recursive:     "true",
-		CaseSensitive: strconv.FormatBool(!cfg.CaseInsensitive),
+		Recursive:     true,
+		CaseSensitive: xmlout.Bool(!cfg.CaseInsensitive),
 		SearchRoot:    givenPath,
 		Timestamp:     meta.Now(),
 	}

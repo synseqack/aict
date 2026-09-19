@@ -54,20 +54,20 @@ type EnvResult struct {
 func (*EnvResult) isEnvResult() {}
 
 type EnvVar struct {
-	XMLName    xml.Name `xml:"var" json:"-"`
-	Name       string   `xml:"name,attr" json:"n"`
-	Value      string   `xml:"value,attr" json:"v"`
-	Type       string   `xml:"type,attr" json:"tp"`
-	Present    string   `xml:"present,attr" json:"pr"`
-	Redacted   string   `xml:"redacted,attr" json:"r"`
-	PathExists string   `xml:"path_exists,attr,omitempty" json:"pe,omitempty"`
+	XMLName    xml.Name    `xml:"var" json:"-"`
+	Name       string      `xml:"name,attr" json:"n"`
+	Value      string      `xml:"value,attr" json:"v"`
+	Type       string      `xml:"type,attr" json:"tp"`
+	Present    xmlout.Bool `xml:"present,attr" json:"pr"`
+	Redacted   xmlout.Bool `xml:"redacted,attr" json:"r"`
+	PathExists xmlout.Bool `xml:"path_exists,attr,omitempty" json:"pe,omitempty"`
 }
 
 type PathEntry struct {
-	XMLName xml.Name `xml:"path_entry" json:"-"`
-	Index   int      `xml:"index,attr" json:"i"`
-	Path    string   `xml:"path,attr" json:"p"`
-	Exists  string   `xml:"exists,attr" json:"e"`
+	XMLName xml.Name    `xml:"path_entry" json:"-"`
+	Index   int         `xml:"index,attr" json:"i"`
+	Path    string      `xml:"path,attr" json:"p"`
+	Exists  xmlout.Bool `xml:"exists,attr" json:"e"`
 }
 
 type EnvError struct {
@@ -118,14 +118,14 @@ func Run(args []string) error {
 
 		isSecret := isSecret(name)
 		varType := classifyType(name, value)
-		pathExists := ""
+		pathExists := xmlout.Bool(false)
 
 		if name == "PATH" {
 			entries := parsePath(value)
 			for i, p := range entries {
-				exists := "false"
+				exists := xmlout.Bool(false)
 				if _, err := os.Stat(p); err == nil {
-					exists = "true"
+					exists = true
 				}
 				result.Path = append(result.Path, PathEntry{
 					Index:  i,
@@ -136,9 +136,9 @@ func Run(args []string) error {
 		} else if strings.HasPrefix(name, "PATH") {
 			entries := parsePath(value)
 			for _, p := range entries {
-				exists := "false"
+				exists := xmlout.Bool(false)
 				if _, err := os.Stat(p); err == nil {
-					exists = "true"
+					exists = true
 				}
 				pathExists = exists
 			}
@@ -152,8 +152,8 @@ func Run(args []string) error {
 			Name:       name,
 			Value:      displayValue,
 			Type:       varType,
-			Present:    "true",
-			Redacted:   fmt.Sprintf("%t", isSecret),
+			Present:    true,
+			Redacted:   xmlout.Bool(isSecret),
 			PathExists: pathExists,
 		})
 	}
@@ -264,7 +264,7 @@ func outputResult(result *EnvResult, cfg Config) error {
 
 func writePlain(w io.Writer, result *EnvResult) error {
 	for _, v := range result.Variables {
-		if v.Redacted == "true" {
+		if bool(v.Redacted) {
 			fmt.Fprintf(w, "%s=\n", v.Name)
 		} else {
 			fmt.Fprintf(w, "%s=%s\n", v.Name, v.Value)

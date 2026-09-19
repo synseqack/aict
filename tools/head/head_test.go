@@ -58,8 +58,8 @@ func TestHead_DefaultLines(t *testing.T) {
 	if result.LinesReturned != 10 {
 		t.Errorf("expected 10 lines returned, got %d", result.LinesReturned)
 	}
-	if result.Truncated != "true" {
-		t.Errorf("expected truncated=true, got %s", result.Truncated)
+	if !result.Truncated {
+		t.Errorf("expected truncated=true, got %v", result.Truncated)
 	}
 }
 
@@ -75,8 +75,8 @@ func TestHead_NLines(t *testing.T) {
 	if result.LinesReturned != 3 {
 		t.Errorf("expected 3 lines returned, got %d", result.LinesReturned)
 	}
-	if result.Truncated != "true" {
-		t.Errorf("expected truncated=true, got %s", result.Truncated)
+	if !result.Truncated {
+		t.Errorf("expected truncated=true, got %v", result.Truncated)
 	}
 }
 
@@ -92,8 +92,8 @@ func TestHead_MoreLinesThanExist(t *testing.T) {
 	if result.LinesReturned != 3 {
 		t.Errorf("expected 3 lines returned, got %d", result.LinesReturned)
 	}
-	if result.Truncated != "false" {
-		t.Errorf("expected truncated=false, got %s", result.Truncated)
+	if result.Truncated {
+		t.Errorf("expected truncated=false, got %v", result.Truncated)
 	}
 }
 

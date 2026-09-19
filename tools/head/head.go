@@ -65,7 +65,7 @@ type HeadResult struct {
 	BytesReturned  int         `xml:"bytes_returned,attr" json:"bret"`
 	FileTotalLines int         `xml:"file_total_lines,attr" json:"ftl"`
 	FileTotalBytes int64       `xml:"file_total_bytes,attr" json:"ftb"`
-	Truncated      string      `xml:"truncated,attr" json:"trunc"`
+	Truncated      xmlout.Bool `xml:"truncated,attr" json:"trunc"`
 	Language       string      `xml:"language,attr" json:"lang"`
 	MIME           string      `xml:"mime,attr" json:"mime"`
 	Content        string      `xml:"content,omitempty" json:"ct"`
@@ -77,18 +77,18 @@ type HeadResult struct {
 func (*HeadResult) isHeadResult() {}
 
 type HeadFile struct {
-	XMLName        xml.Name `xml:"file" json:"-"`
-	Path           string   `xml:"path,attr" json:"p"`
-	LinesRequested int      `xml:"lines_requested,attr" json:"lr"`
-	BytesRequested int      `xml:"bytes_requested,attr" json:"br"`
-	LinesReturned  int      `xml:"lines_returned,attr" json:"lret"`
-	BytesReturned  int      `xml:"bytes_returned,attr" json:"bret"`
-	FileTotalLines int      `xml:"file_total_lines,attr" json:"ftl"`
-	FileTotalBytes int64    `xml:"file_total_bytes,attr" json:"ftb"`
-	Truncated      string   `xml:"truncated,attr" json:"trunc"`
-	Content        string   `xml:"content,omitempty" json:"ct"`
-	Language       string   `xml:"language,attr" json:"lang"`
-	MIME           string   `xml:"mime,attr" json:"mime"`
+	XMLName        xml.Name    `xml:"file" json:"-"`
+	Path           string      `xml:"path,attr" json:"p"`
+	LinesRequested int         `xml:"lines_requested,attr" json:"lr"`
+	BytesRequested int         `xml:"bytes_requested,attr" json:"br"`
+	LinesReturned  int         `xml:"lines_returned,attr" json:"lret"`
+	BytesReturned  int         `xml:"bytes_returned,attr" json:"bret"`
+	FileTotalLines int         `xml:"file_total_lines,attr" json:"ftl"`
+	FileTotalBytes int64       `xml:"file_total_bytes,attr" json:"ftb"`
+	Truncated      xmlout.Bool `xml:"truncated,attr" json:"trunc"`
+	Content        string      `xml:"content,omitempty" json:"ct"`
+	Language       string      `xml:"language,attr" json:"lang"`
+	MIME           string      `xml:"mime,attr" json:"mime"`
 }
 
 type HeadError struct {
@@ -257,7 +257,7 @@ func headFile(path string, cfg Config) (*HeadResult, error) {
 	}
 
 	if isBinary {
-		result.Truncated = "false"
+		result.Truncated = false
 		result.FileTotalLines = 0
 		result.Errors = append(result.Errors, HeadError{Code: 1, Msg: "is a binary file", Path: resolved.Absolute})
 		return result, nil
@@ -271,7 +271,7 @@ func headFile(path string, cfg Config) (*HeadResult, error) {
 		}
 		result.Content = content
 		result.BytesReturned = len(content)
-		result.Truncated = strconv.FormatBool(truncated)
+		result.Truncated = xmlout.Bool(truncated)
 		result.FileTotalLines = countLines(resolved.Absolute)
 		return result, nil
 	}
@@ -287,7 +287,7 @@ func headFile(path string, cfg Config) (*HeadResult, error) {
 		result.Content += "\n"
 	}
 	result.LinesReturned = len(lines)
-	result.Truncated = strconv.FormatBool(truncated)
+	result.Truncated = xmlout.Bool(truncated)
 	result.FileTotalLines = countLines(resolved.Absolute)
 
 	return result, nil

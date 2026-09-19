@@ -86,10 +86,10 @@ type FindResult struct {
 func (*FindResult) isFindResult() {}
 
 type FindCondition struct {
-	XMLName xml.Name `xml:"condition"`
-	Type    string   `xml:"type,attr"`
-	Value   string   `xml:"value,attr"`
-	Negated string   `xml:"negated,attr,omitempty"`
+	XMLName xml.Name    `xml:"condition"`
+	Type    string      `xml:"type,attr"`
+	Value   string      `xml:"value,attr"`
+	Negated xmlout.Bool `xml:"negated,attr,omitempty"`
 }
 
 type FindFile struct {
@@ -246,7 +246,7 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *FindRe
 		}
 		cond := FindCondition{Type: p.kind, Value: value}
 		if p.negate {
-			cond.Negated = "true"
+			cond.Negated = true
 		}
 		result.Conditions = append(result.Conditions, cond)
 	}

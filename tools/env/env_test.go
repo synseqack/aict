@@ -59,8 +59,8 @@ func TestEnv_SecretRedacted(t *testing.T) {
 
 	for _, v := range result.Variables {
 		if v.Name == "MY_API_KEY" {
-			if v.Redacted != "true" {
-				t.Errorf("expected MY_API_KEY to be redacted, got Redacted=%q", v.Redacted)
+			if !v.Redacted {
+				t.Errorf("expected MY_API_KEY to be redacted, got Redacted=%v", v.Redacted)
 			}
 			return
 		}

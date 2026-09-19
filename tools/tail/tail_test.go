@@ -86,8 +86,8 @@ func TestTail_LessLinesThanRequested(t *testing.T) {
 	if result.LinesReturned != 3 {
 		t.Errorf("expected 3 lines returned, got %d", result.LinesReturned)
 	}
-	if result.Truncated != "false" {
-		t.Errorf("expected truncated=false, got %s", result.Truncated)
+	if result.Truncated {
+		t.Errorf("expected truncated=false, got %v", result.Truncated)
 	}
 }
 

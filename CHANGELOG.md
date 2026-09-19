@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `grep` uses ripgrep when it is on `PATH`: the search is handed to
+  `rg --json` and re-emitted in aict's own schema. Which files are searched,
+  which are skipped as binary, the match counts, and every emitted field are
+  identical to the built-in engine — ripgrep supplies only the matching.
+  `aict doctor` reports whether ripgrep was found. Set `AICT_NORG=1` to
+  disable the integration; if ripgrep fails outright, `grep` falls back to
+  the built-in engine instead of reporting an error.
 - `xmlout.Bool`: a boolean type that emits `1`/`0` in compact XML, `true`/`false`
   in verbose XML, and a native unquoted boolean under `--json` in every mode.
 - `internal/xml` tests asserting value preservation in compact mode and native
@@ -34,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ls` no longer hangs on non-regular files. A FIFO with no writer blocks
   `os.Open` until one appears, so a single FIFO anywhere in a tree hung the
   whole listing; content detection now runs only on regular files.
+- `grep -m N` now stops after exactly N matches. The counter was incremented
+  after the limit was tested, so `-m 1` reported two matches. This matches the
+  flag's documented meaning and ripgrep's `-m`, and makes both grep backends
+  agree.
 
 ## [2.2.0] - 2026-09-01
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/synseqack/aict/internal/meta"
+	"github.com/synseqack/aict/internal/ripgrep"
 	"github.com/synseqack/aict/internal/tool"
 	"github.com/synseqack/aict/internal/version"
 	xmlout "github.com/synseqack/aict/internal/xml"
@@ -140,6 +141,7 @@ func runDiagnostics() *DoctorResult {
 	checks := []Check{
 		checkAICTPath(),
 		checkGit(),
+		checkRipgrep(),
 		checkGoEnvironment(),
 		checkPlatform(),
 		checkShellCompletions(),
@@ -210,6 +212,20 @@ func checkGit() Check {
 	}
 
 	return Check{Name: "git", Status: "pass", Message: "git is available and this is a git repository", Severity: "info"}
+}
+
+// checkRipgrep reports whether grep can hand searches to ripgrep. The
+// built-in engine is always available, so a missing rg degrades speed, not
+// correctness.
+func checkRipgrep() Check {
+	if !ripgrep.Available() {
+		return Check{Name: "ripgrep", Status: "warning",
+			Message:  "rg not found - grep uses the built-in engine (set AICT_NORG=1 to force this)",
+			Severity: "info"}
+	}
+	return Check{Name: "ripgrep", Status: "pass",
+		Message:  "rg found - grep uses ripgrep when the flag set supports it",
+		Severity: "info"}
 }
 
 func checkGoEnvironment() Check {

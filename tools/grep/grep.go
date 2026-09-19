@@ -266,6 +266,12 @@ func parseFlags(args []string) (Config, string) {
 }
 
 func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *GrepResult {
+	if useRipgrep(cfg) {
+		if result, ok := searchWithRipgrep(absPath, givenPath, info, cfg); ok {
+			return result
+		}
+	}
+
 	result := &GrepResult{
 		Pattern:       cfg.Pattern,
 		Recursive:     xmlout.Bool(cfg.Recursive),
@@ -382,35 +388,14 @@ func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 	}
 
 	go func() {
-		walker := func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return nil
-			}
-
-			if info.IsDir() {
-				if cfg.ExcludeDir != "" {
-					matched, _ := filepath.Match(cfg.ExcludeDir, info.Name())
-					if matched {
-						return filepath.SkipDir
-					}
-				}
-				return nil
-			}
-
-			if cfg.Include != "" {
-				matched, _ := filepath.Match(cfg.Include, info.Name())
-				if !matched {
-					return nil
-				}
-			}
-
-			searchedFiles.Add(1)
+		// Both backends draw candidates from the same walk, so the set of
+		// files searched is identical whether ripgrep or the built-in engine
+		// runs it.
+		candidates, searched := candidatePaths(dirPath, cfg)
+		searchedFiles.Add(int64(searched))
+		for _, path := range candidates {
 			fileChan <- path
-
-			return nil
 		}
-
-		filepath.Walk(dirPath, walker)
 		close(fileChan)
 	}()
 
@@ -540,10 +525,12 @@ func findMatches(path string, re *regexp.Regexp, cfg Config) []GrepMatch {
 
 					beforeLines = nil
 
+					// Count the match before testing the limit: -m N means N
+					// matches, not N+1.
+					matchCount++
 					if cfg.MaxCount > 0 && matchCount >= cfg.MaxCount {
 						break
 					}
-					matchCount++
 				}
 			}
 		}

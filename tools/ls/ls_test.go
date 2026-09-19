@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -549,5 +550,65 @@ func TestLS_CompactSymlinkTargetNamedTrue(t *testing.T) {
 	}
 	if !strings.Contains(out, `te="1"`) {
 		t.Errorf("target_exists should compact to 1, got: %s", out)
+	}
+}
+
+// writePlain is the one renderer that cannot be checked by unmarshalling, so
+// it gets its own format assertions: file, directory, and broken symlink each
+// have a distinct shape, and errors must read like GNU's.
+func TestLS_PlainOutput(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, dir, "one.txt", "hello")
+	subdir := filepath.Join(dir, "sub")
+	if err := os.Mkdir(subdir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	broken := filepath.Join(dir, "dangling")
+	if err := os.Symlink("nowhere", broken); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+
+	out, err := runLS([]string{dir, "--plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	var sawFile, sawDir bool
+	for _, line := range lines {
+		switch {
+		case strings.HasSuffix(line, "one.txt"):
+			sawFile = true
+			if !strings.Contains(line, "hello") && !regexp.MustCompile(`\b\d`).MatchString(line) {
+				t.Errorf("file line has no size column: %q", line)
+			}
+		case strings.HasSuffix(line, "sub") && strings.HasPrefix(line, "d"):
+			sawDir = true
+		case strings.Contains(line, "dangling"):
+			if !strings.Contains(line, "nowhere -> [broken]") {
+				t.Errorf("broken symlink must mark its target: %q", line)
+			}
+		}
+	}
+	if !sawFile {
+		t.Errorf("plain output lost the file entry:\n%s", out)
+	}
+	if !sawDir {
+		t.Errorf("plain output lost the directory entry:\n%s", out)
+	}
+	if strings.Contains(out, "<ls") || strings.Contains(out, "{") {
+		t.Errorf("plain output is not plain:\n%s", out)
+	}
+}
+
+// The plain renderer reports an unreadable directory the way GNU does instead
+// of emitting an empty XML document.
+func TestLS_PlainError(t *testing.T) {
+	out, err := runLS([]string{testutil.MissingPath(t, "nope"), "--plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(out, "ls: ") || !strings.Contains(out, "no such file") {
+		t.Errorf("plain error = %q; want an `ls: <path>: <msg>` line", out)
 	}
 }

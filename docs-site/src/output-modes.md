@@ -4,7 +4,7 @@ Every `aict` tool supports three output modes.
 
 ## XML (Default for AI)
 
-XML is the default when `AICT_XML=1` is set, or when `--xml` is passed.
+XML is the default. `AICT_XML=1` forces it over an earlier `--json` or `--plain`; `--xml` selects it for one call.
 
 ```xml
 <ls timestamp="1234567890" total_entries="1">

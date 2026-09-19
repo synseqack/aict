@@ -390,7 +390,7 @@ done
 ## Phase 4 — Future Enhancements (Post-MVP)
 
 - [x] `--json` output mode for all tools (mirror XML structure)
-- [ ] `rg` (ripgrep) integration: spawn `rg --json` if available, parse and re-emit as XML
+- [x] `rg` (ripgrep) integration: spawn `rg --json` if available, parse and re-emit as XML
 - [x] `git` subcommands: `git status`, `git diff`, `git log`, `git ls-files`, `git blame` with XML output
 - [ ] Tree-sitter integration for `grep` function-name enrichment (optional, cgo)
 - [x] `--stream` mode: emit XML elements as they're discovered (SAX-like, for huge directories)

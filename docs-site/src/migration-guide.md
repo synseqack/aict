@@ -64,8 +64,8 @@ Most aict tools accept the same short flags as their GNU equivalents (`-l`, `-r`
 
 | Variable | Effect |
 |----------|--------|
-| `AICT_XML=1` | Force XML output for all tools |
-| `AICT_JSON=1` | Force JSON output for all tools |
+| `AICT_XML=1` | Force XML output (the default already; overrides --json/--plain) |
+| `AICT_NOCOMPACT=1` | Verbose attribute names and `true`/`false` booleans |
 
 ## Exit Codes
 

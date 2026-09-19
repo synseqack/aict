@@ -31,7 +31,7 @@ drwxr-xr-x 5 user staff   160 Apr  6 10:00 internal       ← is this a director
 
 ## The solution
 
-`aict` reimplements 33 Unix tools with **structured output** the agent can read directly — no parsing required.
+`aict` reimplements 34 Unix tools with **structured output** the agent can read directly — no parsing required.
 
 ```xml
 $ aict ls src/
@@ -94,7 +94,7 @@ aict ls src/ --json
 # Plain text (same as the original Unix tools)
 aict ls src/ --plain
 
-# Enable XML globally for all aict calls
+# XML is the default; this is only needed to override --json/--plain in a shell alias
 export AICT_XML=1
 ```
 
@@ -252,7 +252,7 @@ Yes. aict is strictly read-only. No network requests (MIME detection uses the Go
 
 **How many dependencies does it have?**
 
-One: the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk), used only by the `aict mcp` subcommand. All 33 tools and every internal package are pure Go standard library — enforced as a hard constraint in [AGENTS.md](AGENTS.md).
+One: the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk), used only by the `aict mcp` subcommand. All 34 tools and every internal package are pure Go standard library — enforced as a hard constraint in [AGENTS.md](AGENTS.md).
 
 ---
 

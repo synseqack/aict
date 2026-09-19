@@ -27,7 +27,7 @@ With `aict`, the agent receives structured data with zero ambiguity:
 Add to your `.bashrc` or `.zshrc`:
 
 ```bash
-# Enable XML output for all aict commands
+# XML is the default already; this overrides a --json/--plain alias
 export AICT_XML=1
 ```
 
@@ -54,8 +54,11 @@ The MCP server exposes every `aict` tool as a callable function to AI assistants
 ### XML (Default for AI)
 
 ```bash
-AICT_XML=1 aict ls src/
+aict ls src/
 ```
+
+XML is what a plain call emits. `AICT_XML=1` forces it even when `--json` or
+`--plain` appears later in an alias or script.
 
 Best for: AI agents, structured parsing, maximum metadata
 

@@ -27,7 +27,7 @@ With `aict`, the agent receives structured data with zero ambiguity:
 Add to your `.bashrc` or `.zshrc`:
 
 ```bash
-# Enable XML output for all aict commands
+# XML is already the default; set this only to override a --json/--plain alias
 export AICT_XML=1
 ```
 
@@ -72,8 +72,11 @@ would rather not decode the legend.
 ### XML (Default for AI)
 
 ```bash
-AICT_XML=1 aict ls src/
+aict ls src/
 ```
+
+XML is the default in a shell without an explicit mode; `AICT_XML=1` forces it
+even when `--json` or `--plain` appears later in the alias or script.
 
 Best for: AI agents, structured parsing, maximum metadata
 

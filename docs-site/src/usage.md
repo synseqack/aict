@@ -55,8 +55,8 @@ aict mcp
 
 | Variable | Description |
 |----------|-------------|
-| `AICT_XML=1` | Default to XML output for all tools |
-| `AICT_JSON=1` | Default to JSON output for all tools |
+| `AICT_XML=1` | Force XML output over an earlier `--json`/`--plain` (XML is the default) |
+| `AICT_NOCOMPACT=1` | Verbose attribute names and `true`/`false` booleans |
 
 ## Help
 

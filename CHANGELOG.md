@@ -27,6 +27,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in verbose XML, and a native unquoted boolean under `--json` in every mode.
 - `internal/xml` tests asserting value preservation in compact mode and native
   JSON booleans.
+- `cat -n`/`--number`: each output line carries its 1-based number and text in a
+  `<line>` element. `content` is unchanged with and without the flag, so an
+  existing consumer still finds the text it expects; `--plain` renders GNU's
+  `%6d\t` numbering.
+- `diff -u`/`-U N`/`--context N`: context lines now flank each change, hunks
+  merge when their context windows touch, and hunk headers match GNU diff
+  (`-0,0` for a pure insertion at the top of a file). `-U 0` still reproduces
+  the old changed-lines-only output. GNU's glued spelling `-U3` is accepted.
+- `checksums -c`/`--check` (also `md5sum -c`, `sha1sum -c`, `sha256sum -c`):
+  reads a manifest of `HASH  PATH` lines and reports each entry as ok or
+  failed. The algorithm is inferred from the digest length, so a manifest
+  carries no algorithm label. A missing or malformed line becomes an
+  `<error>`; a digest mismatch is reported in-band and exits 0, like every
+  other structured failure. `--plain` prints GNU's `path: OK` / `path: FAILED`
+  and a `WARNING: N failed, M could not be read` summary.
 
 ### Changed
 - Boolean attributes in every tool's result structs are typed `xmlout.Bool`
@@ -35,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   change for `--json` consumers.** XML output in both compact and verbose mode
   is otherwise unchanged byte-for-byte, except for empty files, which now
   correctly report `binary="false"` and a text MIME (see Fixed).
+- `--no-compact` is now honoured by every tool. It sets `AICT_NOCOMPACT=1`
+  once in the subcommand dispatcher rather than being re-parsed in each
+  package, so a tool that did not know the flag no longer silently ignores it.
+- `aict help` lists `--no-compact` alongside the output modes, and no longer
+  describes `--xml` as "default if `AICT_XML=1`" — XML is the default mode
+  with or without the variable.
 
 ### Fixed
 - Compact mode no longer rewrites attribute *values* that happen to read as
@@ -48,7 +69,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and left the file classified as an opaque octet stream.
 - `ls` no longer hangs on non-regular files. A FIFO with no writer blocks
   `os.Open` until one appears, so a single FIFO anywhere in a tree hung the
-  whole listing; content detection now runs only on regular files.
+  whole listing; content detection now runs only on regular files. The same
+  guard now covers language detection's shebang sniff, so `find`, `stat`, and
+  `file` do not hang on a FIFO either. `cat`, `head`, and `tail` read content
+  directly and still block, as GNU does.
+- Compact mode shortened the wrong direction. The replacement table is looked
+  up by long name, but registered dictionaries are short → long and were used
+  as-is, so a tool with a dictionary kept its long attribute names in compact
+  output. The table is inverted at the source now; `--pretty` is also honoured
+  in compact mode instead of being dropped.
+- `find`'s `<condition>` elements and `cat`'s `encoding` attribute had no JSON
+  tags, so `--json` emitted Go field names (`Type`, `Value`, `Negated`) that
+  the `--dict` legend never advertised. Both now use the documented short
+  keys. An empty text file also reported `encoding=""` instead of `utf-8`.
+- `file` reported `charset="binary"` for an empty text file; the zero-byte
+  read was treated as an error. It now reports `UTF-8`.
+- `ls` reported a missing path as `path not found`, while the other ten
+  file-reading tools all report `no such file or directory`. An agent
+  matching on the message had to special-case one tool; `ls` now matches.
+- Documentation drifted from the binary: the tool count read 33 in four
+  places (34 is correct), `AICT_JSON=1` was documented in three places and
+  never read by any tool, and every guide implied `export AICT_XML=1` was
+  required to get XML — XML is the default, and the variable only forces it
+  over an earlier `--json`/`--plain`. `AGENTS.md` also documented a
+  `RunWithOutput` test helper that does not exist and an import path
+  (`internal/xmlout`) that is not the package's path; both now match the
+  code.
+- `env` and `ls` plain-text renderers had no test coverage at all. Both now
+  have format assertions — including the one path that can drop data on the
+  floor, `env`'s redacted values.
 - `grep -m N` now stops after exactly N matches. The counter was incremented
   after the limit was tested, so `-m 1` reported two matches. This matches the
   flag's documented meaning and ripgrep's `-m`, and makes both grep backends
@@ -64,13 +113,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `jq`'s `path` property over MCP emitted a literal `.` as the program, and
   `completions`' `shell` emitted a literal `bash` alongside the requested
   shell. Both now translate to real flags (`-p`) or positionals.
-- Fifteen flags that aict's parsers accept but whose values are never read are
-  no longer advertised in tool input schemas: `cat -n`, `checksums -c`,
-  `diff -U`, `du -h`, `df -h`, `grep -E`, `ps -a/-f/-p/--sort`,
-  `sort -o`, `tail -f`, `tar -t`, and `wc -a`. Each either duplicates
-  behaviour that is always on, or is unimplemented; advertising it promised an
-  effect the tool did not have. The flags are still accepted on the command
-  line for compatibility.
+- Twelve flags that aict's parsers accept but whose values are never read are
+  no longer advertised in tool input schemas: `du -h`, `df -h`, `grep -E`,
+  `ps -a/-f/-p/--sort`, `sort -o`, `tail -f`, `tar -t`, and `wc -a`. Each
+  either duplicates behaviour that is always on, or is unimplemented;
+  advertising it promised an effect the tool did not have. The flags are still
+  accepted on the command line for compatibility. (`cat -n`, `checksums -c`,
+  and `diff -U` were on this list too; all three are implemented above and
+  advertised again.)
 
 ## [2.2.0] - 2026-09-01
 

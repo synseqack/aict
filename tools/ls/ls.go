@@ -231,7 +231,10 @@ func listDir(inputPath string, cfg Config) (*LSResult, error) {
 			Path:      resolved.Given,
 			Absolute:  resolved.Absolute,
 			Timestamp: meta.Now(),
-			Errors:    []LSError{{Code: 1, Msg: "path not found", Path: resolved.Absolute}},
+			// Every other tool reports this as "no such file or directory"; ls
+			// alone said "path not found", so an agent matching on the message
+			// had to special-case one tool.
+			Errors: []LSError{{Code: 1, Msg: "no such file or directory", Path: resolved.Absolute}},
 		}, nil
 	}
 

@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-**What**: Single Go binary (`aict`) reimplementing 33 Unix CLI tools that AI coding agents actually call, outputting structured XML instead of plaintext.
+**What**: Single Go binary (`aict`) reimplementing 34 Unix CLI tools that AI coding agents actually call, outputting structured XML instead of plaintext.
 
 **Why**: Human-readable `ls`, `grep`, `cat` output forces agents to parse column positions and chain follow-up calls (`file`, `stat`) for metadata. aict answers in one call with zero parsing ambiguity — it spends more output tokens per call, but fewer agent turns per task (measured: see `benchmarks/TOKENS.md`).
 
@@ -57,12 +57,17 @@ aict/
 │   ├── tokenbench/               # Token-cost benchmark harness
 │   └── gendocs/                  # Docs generation
 ├── internal/
-│   ├── xml/encoder.go            # Shared XML/JSON/plain output
-│   ├── detect/language.go        # Extension → language map
-│   ├── detect/mime.go            # Magic bytes MIME detection
+│   ├── xml/                      # Shared XML/JSON output: encoder.go (modes),
+│   │                              #   compact.go (short names), bool.go (1/0)
+│   ├── detect/                   # language.go + mime.go: extension map, shebang
+│   │                              #   and magic-byte sniffing; both skip
+│   │                              #   non-regular files (see internal/detect)
+│   ├── filemode/                 # Permission bits → rwx string, per-platform
+│   ├── ripgrep/                  # Optional rg backend for grep (AICT_NORG=1 off)
 │   ├── path/resolve.go           # Absolute path resolution
 │   ├── format/size.go            # Bytes → human-readable
 │   ├── meta/timestamp.go         # Unix time + ago_s helpers
+│   ├── testutil/paths.go         # MissingPath: a path guaranteed not to exist
 │   ├── tool/                     # Tool registry + schema generation
 │   └── version/                  # Build version (ldflags-injected)
 └── tools/
@@ -91,8 +96,9 @@ import (
     "github.com/synseqack/aict/internal/detect"
     "github.com/synseqack/aict/internal/format"
     "github.com/synseqack/aict/internal/meta"
-    "github.com/synseqack/aict/internal/path"
-    "github.com/synseqack/aict/internal/xmlout"
+    pathutil "github.com/synseqack/aict/internal/path"
+    "github.com/synseqack/aict/internal/tool"
+    xmlout "github.com/synseqack/aict/internal/xml"
 )
 
 func init() {
@@ -222,22 +228,47 @@ import (
     "testing"
 )
 
+// runTool captures stdout. There is no RunWithOutput helper: every tool
+// writes to os.Stdout, so tests swap the file descriptor and restore it.
+func runTool(t *testing.T, args []string) string {
+    t.Helper()
+    os.Setenv("AICT_XML", "1")
+    os.Setenv("AICT_NOCOMPACT", "1")
+    defer os.Unsetenv("AICT_XML")
+    defer os.Unsetenv("AICT_NOCOMPACT")
+
+    oldStdout := os.Stdout
+    r, w, _ := os.Pipe()
+    os.Stdout = w
+
+    var out bytes.Buffer
+    done := make(chan struct{})
+    go func() {
+        out.ReadFrom(r)
+        close(done)
+    }()
+
+    Run(args)
+    w.Close()
+    os.Stdout = oldStdout
+    <-done
+    return out.String()
+}
+
 func TestToolName_Basic(t *testing.T) {
     // Create temp dir/files
     dir := t.TempDir()
-    // ... setup
-
-    // Run tool
-    var buf bytes.Buffer
-    err := RunWithOutput(dir, &buf, Config{XML: true})
-    if err != nil {
+    path := filepath.Join(dir, "input.txt")
+    if err := os.WriteFile(path, []byte("data"), 0644); err != nil {
         t.Fatal(err)
     }
 
+    out := runTool(t, []string{path})
+
     // Validate XML is well-formed
     var result ResultType
-    if err := xml.Unmarshal(buf.Bytes(), &result); err != nil {
-        t.Fatalf("invalid XML: %v\n%s", err, buf.String())
+    if err := xml.Unmarshal([]byte(out), &result); err != nil {
+        t.Fatalf("invalid XML: %v\n%s", err, out)
     }
 
     // Assert expected values

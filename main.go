@@ -169,9 +169,10 @@ Commands:
 
 	fmt.Print(`
 Output modes:
-  --xml         XML output (default if AICT_XML=1)
+  --xml         XML output (the default)
   --json        JSON output
   --plain       Plain text output
+  --no-compact  Verbose attribute names and true/false booleans
 
 Examples:
   aict ls src/

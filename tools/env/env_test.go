@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -35,6 +36,26 @@ func runEnvWithResult(t *testing.T) *EnvResult {
 		t.Fatalf("invalid XML: %v", err)
 	}
 	return &result
+}
+
+// runEnvRaw returns stdout as-is, for the renderers that are not XML.
+func runEnvRaw(args []string) (string, error) {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	var outBuf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		outBuf.ReadFrom(r)
+		close(done)
+	}()
+
+	err := Run(args)
+	w.Close()
+	os.Stdout = oldStdout
+	<-done
+	return outBuf.String(), err
 }
 
 func TestEnv_PathParsed(t *testing.T) {
@@ -123,5 +144,59 @@ func TestEnv_XMLValidity(t *testing.T) {
 	result := runEnvWithResult(t)
 	if result.XMLName.Local != "env" {
 		t.Errorf("expected root element 'env', got %q", result.XMLName.Local)
+	}
+}
+
+// The plain renderer is the only path that can drop a redacted value on the
+// floor; compare it against the XML view's redaction flag.
+func TestEnv_PlainRedactsSecrets(t *testing.T) {
+	os.Setenv("AICT_TEST_API_KEY", "hunter2")
+	defer os.Unsetenv("AICT_TEST_API_KEY")
+
+	result := runEnvWithResult(t)
+
+	var redacted bool
+	for _, v := range result.Variables {
+		if v.Name == "AICT_TEST_API_KEY" {
+			redacted = bool(v.Redacted)
+			if !redacted {
+				t.Fatal("expected AICT_TEST_API_KEY to be flagged redacted in XML")
+			}
+		}
+	}
+	if !redacted {
+		t.Fatal("AICT_TEST_API_KEY missing from the result entirely")
+	}
+
+	out, err := runEnvRaw([]string{"--plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "AICT_TEST_API_KEY=") {
+			if line != "AICT_TEST_API_KEY=" {
+				t.Errorf("plain output leaked the secret value: %q", line)
+			}
+			return
+		}
+	}
+	t.Errorf("plain output has no line for AICT_TEST_API_KEY:\n%s", out)
+}
+
+// A variable that is not a secret must round-trip its value verbatim.
+func TestEnv_PlainShowsValues(t *testing.T) {
+	os.Setenv("AICT_TEST_PLAIN", "value with spaces")
+	defer os.Unsetenv("AICT_TEST_PLAIN")
+
+	out, err := runEnvRaw([]string{"--plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "AICT_TEST_PLAIN=value with spaces\n") {
+		t.Errorf("plain output lost the value:\n%s", out)
+	}
+	// Plain must be unstructured: no XML root and no JSON object.
+	if strings.Contains(out, "<env") || strings.Contains(out, "{") {
+		t.Errorf("plain output is not plain:\n%s", out)
 	}
 }

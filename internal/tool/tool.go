@@ -110,6 +110,11 @@ func GenerateSchema(name string, description string, configPtr interface{}) Tool
 			fieldType = "string"
 		case reflect.Float64, reflect.Float32:
 			fieldType = "number"
+		case reflect.Slice, reflect.Array:
+			// A repeated flag such as checksums -a md5 -a sha256 arrives
+			// from JSON as an array; advertising it as a string made the
+			// property unreachable over MCP.
+			fieldType = "array"
 		default:
 			fieldType = "string"
 		}

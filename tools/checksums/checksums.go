@@ -37,7 +37,7 @@ func init() {
 
 type Config struct {
 	Algorithms []string `flag:"" desc:"Hash algorithm (md5, sha1, sha256)"`
-	Verify     bool     `flag:"" desc:"Verify checksums from file"`
+	Verify     bool
 	XML        bool
 	JSON       bool
 	Plain      bool

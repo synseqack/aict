@@ -38,8 +38,8 @@ type Config struct {
 	Reverse    bool   `flag:"" desc:"Sort in reverse order"`
 	Key        int    `flag:"" desc:"Sort by field number (1-based)"`
 	Delimiter  string `flag:"" desc:"Field delimiter (default: tab)"`
-	OutputFile string `flag:"" desc:"Write output to file"`
-	Unique     bool   `flag:"" desc:"Remove duplicate lines"`
+	OutputFile string
+	Unique     bool `flag:"" desc:"Remove duplicate lines"`
 	XML        bool
 	JSON       bool
 	Plain      bool

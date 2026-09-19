@@ -62,7 +62,7 @@ type Config struct {
 	ContextLines     int    `flag:"" desc:"Number of context lines around match"`
 	CountOnly        bool   `flag:"" desc:"Count matches only, don't show content"`
 	InvertMatch      bool   `flag:"" desc:"Invert match - show non-matching lines"`
-	ExtendedRegex    bool   `flag:"" desc:"Use extended regular expressions"`
+	ExtendedRegex    bool
 	FixedStrings     bool   `flag:"" desc:"Treat pattern as literal string"`
 	Include          string `flag:"" desc:"Include files matching pattern (e.g., *.go)"`
 	ExcludeDir       string `flag:"" desc:"Exclude directories matching pattern"`

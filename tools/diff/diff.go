@@ -54,7 +54,7 @@ type Config struct {
 	Recursive      bool   `flag:"" desc:"Compare directories recursively"`
 	IgnoreAllSpace bool   `flag:"" desc:"Ignore all whitespace changes"`
 	Quiet          bool   `flag:"" desc:"Output only whether files differ"`
-	Context        int    `flag:"" desc:"Number of context lines"`
+	Context        int
 	XML            bool
 	JSON           bool
 	Plain          bool

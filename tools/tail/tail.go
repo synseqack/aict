@@ -47,7 +47,7 @@ type Config struct {
 	Bytes     int `flag:"" desc:"Number of bytes to show"`
 	LinesFlag bool
 	BytesFlag bool
-	Follow    bool `flag:"" desc:"Follow file updates in real-time"`
+	Follow    bool
 	XML       bool
 	JSON      bool
 	Plain     bool

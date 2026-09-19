@@ -46,7 +46,7 @@ type Config struct {
 	Words     bool `flag:"" desc:"Count words"`
 	Bytes     bool `flag:"" desc:"Count bytes"`
 	MaxLines  bool `flag:"" desc:"Show maximum line length"`
-	AllFiles  bool `flag:"" desc:"Count all files including hidden"`
+	AllFiles  bool
 	XML       bool
 	JSON      bool
 	Plain     bool

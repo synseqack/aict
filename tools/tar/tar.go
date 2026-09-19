@@ -31,7 +31,7 @@ func init() {
 }
 
 type Config struct {
-	List      bool   `flag:"" desc:"List archive contents"`
+	List      bool
 	Extract   string `flag:"" desc:"Extract a specific file path from the archive to stdout"`
 	XML       bool
 	JSON      bool

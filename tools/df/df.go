@@ -40,7 +40,7 @@ func init() {
 }
 
 type Config struct {
-	HumanSize bool `flag:"" desc:"Show sizes in human-readable format"`
+	HumanSize bool
 	XML       bool
 	JSON      bool
 	Plain     bool

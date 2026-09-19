@@ -38,7 +38,7 @@ func init() {
 
 type Config struct {
 	Summarize bool `flag:"" desc:"Show only total for each argument"`
-	HumanSize bool `flag:"" desc:"Show sizes in human-readable format"`
+	HumanSize bool
 	All       bool `flag:"" desc:"Count all files, not just directories"`
 	MaxDepth  int  `flag:"" desc:"Maximum depth to show entries"`
 	XML       bool

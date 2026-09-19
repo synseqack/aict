@@ -41,7 +41,7 @@ func init() {
 }
 
 type Config struct {
-	LineNumbers bool `flag:"" desc:"Show line numbers"`
+	LineNumbers bool
 	XML         bool
 	JSON        bool
 	Plain       bool

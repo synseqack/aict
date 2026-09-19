@@ -158,9 +158,9 @@ func TestBuildArgs(t *testing.T) {
 		{
 			name:     "ls with path",
 			toolName: "ls",
-			args:     map[string]interface{}{"path": ".", "all": true, "recursive": true},
+			args:     map[string]interface{}{"paths": []interface{}{"."}, "all": true, "recursive": true},
 			check: func(result []string) bool {
-				return contains(result, "-a") && contains(result, "-R")
+				return contains(result, "-a") && contains(result, "-R") && contains(result, ".")
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestBuildArgs(t *testing.T) {
 			toolName: "grep",
 			args:     map[string]interface{}{"pattern": "func", "recursive": true, "caseInsensitive": true},
 			check: func(result []string) bool {
-				return contains(result, "-r") && contains(result, "-i")
+				return contains(result, "-r") && contains(result, "-i") && contains(result, "func")
 			},
 		},
 		{
@@ -176,7 +176,7 @@ func TestBuildArgs(t *testing.T) {
 			toolName: "grep",
 			args:     map[string]interface{}{"pattern": "test", "include": "*.go"},
 			check: func(result []string) bool {
-				return contains(result, "--include") && contains(result, "*.go")
+				return contains(result, "--include") && contains(result, "*.go") && contains(result, "test")
 			},
 		},
 		{
@@ -188,11 +188,15 @@ func TestBuildArgs(t *testing.T) {
 			},
 		},
 		{
-			name:     "cat with line numbers",
+			// cat -n is accepted by the parser but never read, so it is
+			// deliberately not advertised over MCP. See the SP4 parity
+			// report; this case pins that decision so the flag is not
+			// silently re-advertised before it is implemented.
+			name:     "cat line numbers are not advertised",
 			toolName: "cat",
-			args:     map[string]interface{}{"lineNumbers": true},
+			args:     map[string]interface{}{"lineNumbers": true, "files": []interface{}{"a.txt"}},
 			check: func(result []string) bool {
-				return contains(result, "-n")
+				return !contains(result, "-n") && contains(result, "a.txt")
 			},
 		},
 		{

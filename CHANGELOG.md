@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- MCP server: every tool's input schema now advertises its positional
+  inputs (`paths`, `pattern`, `old`/`new`, `archive`, …) with the order the
+  tool's argv requires. Previously an agent could not discover how to pass a
+  path or a search pattern at all.
+- MCP server: compact JSON responses carry a `_legend` object mapping the
+  short names aict emits (`p`, `fl`, `cs`) back to their long forms, so an
+  agent can decode a response without a second round trip. Only the
+  abbreviations a response actually uses are included.
 - `grep` uses ripgrep when it is on `PATH`: the search is handed to
   `rg --json` and re-emitted in aict's own schema. Which files are searched,
   which are skipped as binary, the match counts, and every emitted field are
@@ -45,6 +53,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after the limit was tested, so `-m 1` reported two matches. This matches the
   flag's documented meaning and ripgrep's `-m`, and makes both grep backends
   agree.
+- The MCP server no longer shuffles positional arguments. A tool's inputs
+  arrive as a JSON object, which carries no order, and the argv was built by
+  walking that object's map — so `diff a b` came out as `b a` on roughly one
+  call in five, and `cat f1 f2 f3` listed files in a different order each
+  time. Positionals are now emitted in the order each tool's parser expects.
+- The MCP server dropped JSON array arguments entirely, so
+  `checksums -a md5 -a sha256` was unreachable over MCP. Arrays now expand to
+  repeated flags.
+- `jq`'s `path` property over MCP emitted a literal `.` as the program, and
+  `completions`' `shell` emitted a literal `bash` alongside the requested
+  shell. Both now translate to real flags (`-p`) or positionals.
+- Fifteen flags that aict's parsers accept but whose values are never read are
+  no longer advertised in tool input schemas: `cat -n`, `checksums -c`,
+  `diff -U`, `du -h`, `df -h`, `grep -E`, `ps -a/-f/-p/--sort`,
+  `sort -o`, `tail -f`, `tar -t`, and `wc -a`. Each either duplicates
+  behaviour that is always on, or is unimplemented; advertising it promised an
+  effect the tool did not have. The flags are still accepted on the command
+  line for compatibility.
 
 ## [2.2.0] - 2026-09-01
 

@@ -8,240 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/synseqack/aict/internal/tool"
+	xmlout "github.com/synseqack/aict/internal/xml"
 )
-
-var flagMappings = map[string]map[string]string{
-	"ls": {
-		"all":       "-a",
-		"almostall": "-A",
-		"sorttime":  "-t",
-		"reverse":   "-r",
-		"recursive": "-R",
-		"pretty":    "--pretty",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"grep": {
-		"recursive":        "-r",
-		"linenumbers":      "-n",
-		"fileswithmatches": "-l",
-		"caseinsensitive":  "-i",
-		"wordmatch":        "-w",
-		"countonly":        "-c",
-		"invertmatch":      "-v",
-		"extendedregex":    "-E",
-		"fixedstrings":     "-F",
-		"include":          "--include",
-		"excludedir":       "--exclude-dir",
-		"maxcount":         "-m",
-		"nocompact":        "--no-compact",
-		"dict":             "--dict",
-		"help":             "-h",
-	},
-	"cat": {
-		"linenumbers": "-n",
-		"nocompact":   "--no-compact",
-		"dict":        "--dict",
-		"help":        "-h",
-	},
-	"find": {
-		"name":      "-name",
-		"type":      "-type",
-		"mtime":     "-mtime",
-		"maxdepth":  "-maxdepth",
-		"invert":    "!",
-		"or":        "-o",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"stat": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"wc": {
-		"bytes":     "-c",
-		"words":     "-w",
-		"lines":     "-l",
-		"maxlines":  "-L",
-		"allfiles":  "-a",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"diff": {
-		"brief":     "--brief",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"head": {
-		"lines":     "-n",
-		"bytes":     "-c",
-		"quiet":     "-q",
-		"verbose":   "-v",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"tail": {
-		"lines":     "-n",
-		"bytes":     "-c",
-		"follow":    "-f",
-		"quiet":     "-q",
-		"verbose":   "-v",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"du": {
-		"all":       "-a",
-		"summarize": "-s",
-		"human":     "-h",
-		"maxdepth":  "-max-depth",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"df": {
-		"human":     "-h",
-		"inodes":    "-i",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"env": {
-		"ignore":    "-i",
-		"vars":      "-u",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"ps": {
-		"all":       "-a",
-		"full":      "-f",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"system": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"tr": {
-		"delete":    "-d",
-		"squeeze":   "-s",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"cut": {
-		"bytes":     "-b",
-		"chars":     "-c",
-		"delimit":   "-d",
-		"fields":    "-f",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"uniq": {
-		"count":     "-c",
-		"duplicate": "-d",
-		"unique":    "-u",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"sort": {
-		"numeric":   "-n",
-		"reverse":   "-r",
-		"unique":    "-u",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"pwd": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"dirname": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"basename": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"realpath": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"file": {
-		"mime":      "--mime-type",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"checksums": {
-		"algorithm": "-a",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"doctor": {
-		"verbose":   "-v",
-		"fix":       "--fix",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"git": {
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-		"help":      "-h",
-	},
-	"jq": {
-		"path":      ".",
-		"raw":       "-r",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-	},
-	"sed": {
-		"suppress":       "-n",
-		"script":         "-e",
-		"extended_regex": "-E",
-		"nocompact":      "--no-compact",
-		"dict":           "--dict",
-	},
-	"awk": {
-		"field_sep": "-F",
-		"program":   "-f",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-	},
-	"tar": {
-		"list":      "-t",
-		"extract":   "-x",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-	},
-	"completions": {
-		"shell":     "bash",
-		"nocompact": "--no-compact",
-		"dict":      "--dict",
-	},
-}
 
 func toBool(v interface{}) bool {
 	if b, ok := v.(bool); ok {
@@ -271,26 +45,43 @@ func getInt(args map[string]interface{}, key string, defaultVal int) int {
 	return defaultVal
 }
 
+// buildArgs turns an MCP argument object into the argv aict's own parseFlags
+// expects. Flags come first, then positional arguments in the order
+// positionalInputs declares. Both stages are deterministic: a JSON object
+// carries no order, so iterating it directly made the argv — and therefore
+// `diff a b` and `cat f1 f2` — come out shuffled on a fraction of calls.
 func buildArgs(toolName string, args map[string]interface{}) ([]string, error) {
-	mappings, ok := flagMappings[toolName]
-	if !ok {
-		mappings = make(map[string]string)
-	}
-
 	var result []string
 
+	// Keys arrive in whatever case the caller chose; the tables are all
+	// lowercase, so normalise once and read through the copy from here on.
+	normalized := make(map[string]interface{}, len(args))
 	for key, value := range args {
-		if key == "" {
+		if key != "" {
+			normalized[strings.ToLower(key)] = value
+		}
+	}
+
+	// Flags, sorted by property name so repeated calls with the same input
+	// produce identical argv. Order does not matter to any aict parser, but
+	// it matters to anyone reading a log or a test.
+	flagKeys := make([]string, 0, len(normalized))
+	for key := range normalized {
+		flagKeys = append(flagKeys, key)
+	}
+	sort.Strings(flagKeys)
+
+	for _, lowerKey := range flagKeys {
+		// A declared positional reaches the tool positionally below.
+		if _, isPositional := positionalProperty(toolName, lowerKey); isPositional {
 			continue
 		}
-
-		lowerKey := strings.ToLower(key)
-		flag, hasFlag := mappings[lowerKey]
+		flag, hasFlag := flagFor(toolName, lowerKey)
 		if !hasFlag || flag == "" {
 			continue
 		}
 
-		switch v := value.(type) {
+		switch v := normalized[lowerKey].(type) {
 		case bool:
 			if v {
 				result = append(result, flag)
@@ -300,25 +91,67 @@ func buildArgs(toolName string, args map[string]interface{}) ([]string, error) {
 				result = append(result, flag, v)
 			}
 		case float64:
-			if v != 0 {
-				result = append(result, flag, fmt.Sprintf("%d", int(v)))
+			// Emit the value even when it is zero: `head -n 0` is a
+			// meaningful request, not an omitted one.
+			result = append(result, flag, strconv.Itoa(int(v)))
+		case []interface{}:
+			// A repeated flag such as checksums -a md5 -a sha256 arrives
+			// from JSON as an array and is expanded in order.
+			for _, item := range v {
+				if s, ok := item.(string); ok && s != "" {
+					result = append(result, flag, s)
+				}
 			}
 		}
 	}
 
-	for key, value := range args {
-		lowerKey := strings.ToLower(key)
-		if _, hasFlag := mappings[lowerKey]; hasFlag {
+	// Positionals, in the order the tool's argv requires.
+	for _, p := range positionalOrder(toolName) {
+		value, ok := normalized[p.property]
+		if !ok {
 			continue
 		}
-
 		switch v := value.(type) {
 		case string:
-			if v != "" && lowerKey != "help" && lowerKey != "xml" && lowerKey != "json" && lowerKey != "plain" && lowerKey != "pretty" {
+			if v != "" {
 				result = append(result, v)
+			}
+		case []interface{}:
+			for _, item := range v {
+				if s, ok := item.(string); ok && s != "" {
+					result = append(result, s)
+				}
+			}
+		case float64:
+			result = append(result, strconv.Itoa(int(v)))
+		}
+	}
+
+	// Anything the caller sent that neither table knows about still reaches
+	// the tool, sorted rather than map-ordered, so the argv stays
+	// reproducible while remaining permissive.
+	var leftover []string
+	for _, lowerKey := range flagKeys {
+		if _, hasFlag := flagFor(toolName, lowerKey); hasFlag {
+			continue
+		}
+		if _, isPositional := positionalProperty(toolName, lowerKey); isPositional {
+			continue
+		}
+		switch v := normalized[lowerKey].(type) {
+		case string:
+			if v != "" && lowerKey != "help" && lowerKey != "xml" && lowerKey != "json" && lowerKey != "plain" {
+				leftover = append(leftover, v)
+			}
+		case []interface{}:
+			for _, item := range v {
+				if s, ok := item.(string); ok && s != "" {
+					leftover = append(leftover, s)
+				}
 			}
 		}
 	}
+	result = append(result, leftover...)
 
 	return result, nil
 }
@@ -412,10 +245,77 @@ func toolHandler(toolName string) func(ctx context.Context, req *mcp.CallToolReq
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: output},
+				&mcp.TextContent{Text: annotateWithLegend(toolName, output)},
 			},
 		}, nil
 	}
+}
+
+// annotateWithLegend adds a tool's short-to-long name map to a compact JSON
+// response. aict's compact mode is what makes it cheap to send, but it leaves
+// an agent reading {"p":"x","fl":"","cs":true} with no way to decode the
+// abbreviations; the legend lets it do that without a second round trip.
+// Responses that are not a compact JSON object are returned untouched.
+//
+// Only the abbreviations actually present in the response are included, so a
+// short answer carries a short legend. The needle is the full quoted key plus
+// the separating colon, which cannot match inside a longer key: in
+// {"name":"x"} the sequence `"n":` does not occur, because the character
+// after `"n` is `a`.
+func annotateWithLegend(toolName, output string) string {
+	dict := xmlout.GetRegisteredDict(toolName)
+	if len(dict) == 0 {
+		return output
+	}
+	if len(output) < 2 || output[0] != '{' {
+		return output
+	}
+
+	keys := make([]string, 0, len(dict))
+	for short := range dict {
+		needle := `"` + short + `":`
+		if strings.Contains(output, needle) {
+			keys = append(keys, short)
+		}
+	}
+	if len(keys) == 0 {
+		return output
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	b.Grow(len(output) + len(keys)*24)
+	b.WriteString(`{"_legend":{`)
+	for i, short := range keys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		legendEntry(&b, short)
+		b.WriteByte(':')
+		legendEntry(&b, dict[short])
+	}
+	b.WriteString(`}`)
+
+	// A trailing comma before a bare closing brace would be invalid JSON, so
+	// an object that carries no fields of its own absorbs the brace here.
+	body := strings.TrimSpace(output[1:])
+	if body != "}" {
+		b.WriteByte(',')
+	}
+	b.WriteString(body)
+	return b.String()
+}
+
+// legendEntry writes a string as a compact JSON literal.
+func legendEntry(b *strings.Builder, s string) {
+	enc := json.NewEncoder(b)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(s)
+	// Encode appends a newline; drop it so the surrounding object stays
+	// on one line.
+	str := b.String()
+	b.Reset()
+	b.WriteString(strings.TrimSuffix(str, "\n"))
 }
 
 func Serve() error {
@@ -443,6 +343,8 @@ func Serve() error {
 			log.Printf("warning: failed to unmarshal schema for %s: %v", name, err)
 			continue
 		}
+
+		mergePositionalSchema(name, schemaMap)
 
 		server.AddTool(&mcp.Tool{
 			Name:        name,

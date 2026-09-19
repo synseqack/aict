@@ -45,10 +45,10 @@ func init() {
 }
 
 type Config struct {
-	All       bool   `flag:"" desc:"Show all processes"`
-	Full      bool   `flag:"" desc:"Show full command details"`
-	PID       string `flag:"" desc:"Filter by PID"`
-	SortBy    string `flag:"" desc:"Sort by field (e.g., pid, cpu, mem)"`
+	All       bool
+	Full      bool
+	PID       string
+	SortBy    string
 	XML       bool
 	JSON      bool
 	Plain     bool

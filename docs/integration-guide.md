@@ -49,6 +49,24 @@ The MCP server exposes every `aict` tool as a callable function to AI assistants
 
 2. The agent can now call tools directly without shell spawning
 
+Tool arguments map onto the command line: boolean properties become flags,
+string and integer properties become `flag value`, and properties an array
+expands to repeated flags (`checksums` takes `algorithms: ["md5", "sha256"]`).
+The inputs each tool accepts positionally — `paths`, `pattern`, `old`/`new`,
+`archive`, and so on — appear in that tool's input schema, and are always
+sent in the order the tool expects.
+
+Responses are compact JSON with a `_legend` object naming the short keys the
+response actually used:
+
+```json
+{"_legend": {"p": "path", "n": "total_entries"}, "p": "/src", "n": 12, ...}
+```
+
+The universal output flags `nocompact`, `pretty`, and `dict` are accepted by
+every tool. `nocompact` switches a response to verbose long names if you
+would rather not decode the legend.
+
 ## Output Modes
 
 ### XML (Default for AI)

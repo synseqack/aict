@@ -153,17 +153,17 @@ func compactXML(xmlStr string, v interface{}, toolName string) string {
 	if os.Getenv("AICT_NOCOMPACT") == "1" {
 		return xmlStr
 	}
-	// Try to get registered dictionary first (short -> long)
-	shortToLong := GetRegisteredDict(toolName)
-	if shortToLong == nil {
-		shortToLong = make(map[string]string)
-		extractAttrMapping(v, shortToLong)
-	}
 
-	// Invert to get long -> short for replacement
+	// Replacement looks an attribute up by its long name, so the table must be
+	// long -> short. Registered dictionaries are short -> long and are inverted
+	// here; the struct-tag fallback writes long -> short directly.
 	longToShort := make(map[string]string)
-	for short, long := range shortToLong {
-		longToShort[long] = short
+	if registered := GetRegisteredDict(toolName); registered != nil {
+		for short, long := range registered {
+			longToShort[long] = short
+		}
+	} else {
+		extractAttrMapping(v, longToShort)
 	}
 
 	// Match: space+attr, >+attr, or tagname+space+attr (first attr after tag name)

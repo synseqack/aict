@@ -382,6 +382,72 @@ func TestCompactXML_Feature(t *testing.T) {
 	}
 }
 
+// fallbackResult deliberately has no registered dictionary, so compaction
+// must reach it through the struct-tag path.
+type fallbackResult struct {
+	XMLName   xml.Name `xml:"fallback" json:"-"`
+	Path      string   `xml:"path,attr" json:"p"`
+	Absolute  string   `xml:"absolute,attr" json:"a"`
+	SizeBytes int64    `xml:"size_bytes,attr" json:"s"`
+}
+
+func TestCompactXML_FallbackDict(t *testing.T) {
+	os.Unsetenv("AICT_NOCOMPACT")
+
+	var buf bytes.Buffer
+	if err := WriteXML(&buf, &fallbackResult{Path: ".", Absolute: "/tmp", SizeBytes: 12}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	output := buf.String()
+	for _, want := range []string{`p="."`, `a="/tmp"`, `s="12"`} {
+		if !strings.Contains(output, want) {
+			t.Errorf("fallback dict must compact %s, got: %s", want, output)
+		}
+	}
+	for _, unwanted := range []string{`path="."`, `absolute="/tmp"`, `size_bytes="12"`} {
+		if strings.Contains(output, unwanted) {
+			t.Errorf("fallback dict must not emit %s, got: %s", unwanted, output)
+		}
+	}
+}
+
+func TestWriteXML_PrettyIsIndented(t *testing.T) {
+	os.Unsetenv("AICT_NOCOMPACT")
+
+	result := &testResult{
+		Path:         ".",
+		Absolute:     "/tmp",
+		TotalEntries: 1,
+		Timestamp:    1700000000,
+		Entries:      []testEntry{{Name: "nested.go", SizeBytes: 10, Language: "go"}},
+	}
+
+	// Compact mode with pretty: short names, but still indented.
+	var buf bytes.Buffer
+	if err := WriteXML(&buf, result, true); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "\n  <entry") {
+		t.Errorf("pretty output should indent nested elements, got: %q", buf.String())
+	}
+	if !strings.Contains(buf.String(), `nm="nested.go"`) {
+		t.Errorf("pretty output should still compact attributes, got: %q", buf.String())
+	}
+
+	// Verbose mode with pretty must stay valid XML.
+	os.Setenv("AICT_NOCOMPACT", "1")
+	defer os.Unsetenv("AICT_NOCOMPACT")
+	var verbose bytes.Buffer
+	if err := WriteXML(&verbose, result, true); err != nil {
+		t.Fatal(err)
+	}
+	var parsed testResult
+	if err := xml.Unmarshal(verbose.Bytes(), &parsed); err != nil {
+		t.Fatalf("verbose pretty XML is not valid: %v\n%s", err, verbose.String())
+	}
+}
+
 func TestCompactXML_AttributeRegex(t *testing.T) {
 	// Test the regex pattern used for attribute replacement
 	pattern := regexp.MustCompile(`([ >]|<[a-z]+ )([a-z_]+)="`)

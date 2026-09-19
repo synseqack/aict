@@ -14,11 +14,22 @@ func IsXMLMode() bool {
 	return os.Getenv("AICT_XML") == "1"
 }
 
-// WriteXML writes XML with short attribute names (compact by default)
+// WriteXML writes XML with short attribute names (compact by default).
+// pretty requests indentation in whichever mode is selected.
 func WriteXML(w io.Writer, v interface{}, pretty bool) error {
 	compactBools = os.Getenv("AICT_NOCOMPACT") != "1"
 
-	data, err := xml.Marshal(v)
+	if !compactBools {
+		return WriteXMLNoCompact(w, v, pretty)
+	}
+
+	var data []byte
+	var err error
+	if pretty {
+		data, err = xml.MarshalIndent(v, "", "  ")
+	} else {
+		data, err = xml.Marshal(v)
+	}
 	if err != nil {
 		return err
 	}
@@ -47,6 +58,10 @@ func WriteXMLNoCompact(w io.Writer, v interface{}, pretty bool) error {
 
 // WriteJSON writes JSON with short keys (struct tags supply them)
 func WriteJSON(w io.Writer, v interface{}) error {
+	// JSON never compacts booleans, but every marshaling entry point owns the
+	// mode so a caller cannot leave a stale value from an earlier write.
+	compactBools = false
+
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err

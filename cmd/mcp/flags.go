@@ -25,14 +25,19 @@ var flagMappings = map[string]map[string]string{
 		"fieldsep": "-F",
 		"program":  "-f",
 	},
+	"cat": {
+		"linenumbers": "-n",
+	},
 	"checksums": {
 		"algorithms": "-a",
+		"verify":     "-c",
 	},
 	// The checksums package registers these as separate commands that each
-	// default to one algorithm; -a still selects which are reported.
-	"md5sum":    {"algorithms": "-a"},
-	"sha1sum":   {"algorithms": "-a"},
-	"sha256sum": {"algorithms": "-a"},
+	// default to one algorithm; -a still selects which are reported and
+	// -c/--check is shared by all of them.
+	"md5sum":    {"algorithms": "-a", "verify": "-c"},
+	"sha1sum":   {"algorithms": "-a", "verify": "-c"},
+	"sha256sum": {"algorithms": "-a", "verify": "-c"},
 	"cut": {
 		"fields":     "-f",
 		"delimiter":  "-d",
@@ -41,6 +46,7 @@ var flagMappings = map[string]map[string]string{
 	},
 	"diff": {
 		"unified":        "-u",
+		"context":        "-U",
 		"recursive":      "-r",
 		"ignoreallspace": "-w",
 		"quiet":          "-q",
@@ -135,7 +141,7 @@ var flagMappings = map[string]map[string]string{
 		"bytes":    "-c",
 		"maxlines": "-L",
 	},
-	// cat, completions, df, env, ps, pwd, basename, dirname,
+	// completions, df, env, ps, pwd, basename, dirname,
 	// realpath, git, doctor, system take only output flags and positionals.
 }
 

@@ -54,13 +54,17 @@ type Config struct {
 	Recursive      bool   `flag:"" desc:"Compare directories recursively"`
 	IgnoreAllSpace bool   `flag:"" desc:"Ignore all whitespace changes"`
 	Quiet          bool   `flag:"" desc:"Output only whether files differ"`
-	Context        int
+	Context        int    `flag:"" desc:"Lines of context shown around each change"`
 	XML            bool
 	JSON           bool
 	Plain          bool
 	Pretty         bool
 	NoCompact      bool
 	Dict           bool
+
+	// contextExplicit is set by -U/--context so that -U 0 ("no context") is
+	// distinguishable from the flag being absent.
+	contextExplicit bool
 }
 
 type DiffResult struct {
@@ -206,8 +210,11 @@ func parseFlags(args []string) (Config, []string) {
 			}
 		case "-U", "--context":
 			if i+1 < len(args) {
-				n, _ := strconv.Atoi(args[i+1])
-				cfg.Context = n
+				n, err := strconv.Atoi(args[i+1])
+				if err == nil {
+					cfg.Context = n
+					cfg.contextExplicit = true
+				}
 				i++
 			}
 		case "--xml", "-xml":
@@ -223,7 +230,14 @@ func parseFlags(args []string) (Config, []string) {
 		case "--dict":
 			cfg.Dict = true
 		default:
-			if !strings.HasPrefix(arg, "-") {
+			// GNU accepts the count glued to the flag, so -U3 works there
+			// too; a bare -U is the empty-prefix case handled above.
+			if strings.HasPrefix(arg, "-U") && len(arg) > 2 {
+				if n, err := strconv.Atoi(arg[2:]); err == nil {
+					cfg.Context = n
+					cfg.contextExplicit = true
+				}
+			} else if !strings.HasPrefix(arg, "-") {
 				positional = append(positional, arg)
 			}
 		}
@@ -291,6 +305,19 @@ func readLines(path string, ignoreSpace bool) ([]string, error) {
 	return lines, scanner.Err()
 }
 
+// effectiveContext is how many unchanged lines flank a change. -U sets it
+// explicitly (0 included); -u alone gets GNU's default of 3; plain diff gets
+// none, which keeps hunk output to changed lines only.
+func effectiveContext(cfg Config) int {
+	if cfg.contextExplicit {
+		return cfg.Context
+	}
+	if cfg.Unified {
+		return 3
+	}
+	return 0
+}
+
 func computeDiff(oldLines, newLines []string, oldName, newName string, cfg Config) *DiffResult {
 	result := &DiffResult{
 		OldFile:   oldName,
@@ -313,55 +340,125 @@ func computeDiff(oldLines, newLines []string, oldName, newName string, cfg Confi
 
 	edits := computeLCS(oldLines, newLines)
 
-	var hunks []DiffHunk
-	var current *DiffHunk
-	added := 0
-	removed := 0
+	// Flatten the edit script into one entry per line so a change can look at
+	// its neighbours on both sides when claiming context.
+	type entry struct {
+		kind     editKind
+		oldIndex int
+		newIndex int
+	}
 
-	oldIdx := 0
-	newIdx := 0
-
+	entries := make([]entry, 0, len(edits))
+	oldIdx, newIdx := 0, 0
 	for _, e := range edits {
-		if e.kind == equal {
-			if current != nil {
-				hunks = append(hunks, *current)
-				current = nil
-			}
+		switch e.kind {
+		case equal:
+			entries = append(entries, entry{kind: equal, oldIndex: oldIdx, newIndex: newIdx})
 			oldIdx++
 			newIdx++
-			continue
-		}
-
-		if current == nil {
-			current = &DiffHunk{
-				OldStart: oldIdx + 1,
-				NewStart: newIdx + 1,
-			}
-		}
-
-		if e.kind == deleted {
-			removed++
-			current.OldCount++
-			current.Lines = append(current.Lines, DiffLine{
-				Type:    "removed",
-				Number:  oldIdx + 1,
-				Content: oldLines[oldIdx],
-			})
+		case deleted:
+			entries = append(entries, entry{kind: deleted, oldIndex: oldIdx, newIndex: -1})
 			oldIdx++
-		} else if e.kind == inserted {
-			added++
-			current.NewCount++
-			current.Lines = append(current.Lines, DiffLine{
-				Type:    "added",
-				Number:  newIdx + 1,
-				Content: newLines[newIdx],
-			})
+		case inserted:
+			entries = append(entries, entry{kind: inserted, oldIndex: -1, newIndex: newIdx})
 			newIdx++
 		}
 	}
 
-	if current != nil {
-		hunks = append(hunks, *current)
+	// A line is in a hunk when it changes or sits within context lines of a
+	// change. Runs of in-hunk entries merge, so two changes separated by fewer
+	// than twice the context collapse into one hunk, as in GNU diff.
+	context := effectiveContext(cfg)
+	inHunk := make([]bool, len(entries))
+	for i, e := range entries {
+		if e.kind == equal {
+			continue
+		}
+		lo := i - context
+		if lo < 0 {
+			lo = 0
+		}
+		hi := i + context
+		if hi >= len(entries) {
+			hi = len(entries) - 1
+		}
+		for j := lo; j <= hi; j++ {
+			inHunk[j] = true
+		}
+	}
+
+	var hunks []DiffHunk
+	added, removed := 0, 0
+	oldSeen, newSeen := 0, 0
+
+	for i := 0; i < len(entries); i++ {
+		if !inHunk[i] {
+			e := entries[i]
+			if e.kind != inserted {
+				oldSeen++
+			}
+			if e.kind != deleted {
+				newSeen++
+			}
+			continue
+		}
+
+		// Consume one maximal run of in-hunk entries.
+		end := i
+		for end+1 < len(entries) && inHunk[end+1] {
+			end++
+		}
+
+		oldBefore, newBefore := oldSeen, newSeen
+		hunk := DiffHunk{}
+		for j := i; j <= end; j++ {
+			e := entries[j]
+			switch e.kind {
+			case deleted:
+				removed++
+				hunk.OldCount++
+				hunk.Lines = append(hunk.Lines, DiffLine{
+					Type:    "removed",
+					Number:  e.oldIndex + 1,
+					Content: oldLines[e.oldIndex],
+				})
+				oldSeen++
+			case inserted:
+				added++
+				hunk.NewCount++
+				hunk.Lines = append(hunk.Lines, DiffLine{
+					Type:    "added",
+					Number:  e.newIndex + 1,
+					Content: newLines[e.newIndex],
+				})
+				newSeen++
+			case equal:
+				hunk.OldCount++
+				hunk.NewCount++
+				hunk.Lines = append(hunk.Lines, DiffLine{
+					Type:    "context",
+					Number:  e.oldIndex + 1,
+					Content: oldLines[e.oldIndex],
+				})
+				oldSeen++
+				newSeen++
+			}
+		}
+
+		// A hunk made purely of insertions has no old lines; GNU reports the
+		// position past the last old line as 0-based (e.g. -0,0).
+		if hunk.OldCount > 0 {
+			hunk.OldStart = oldBefore + 1
+		} else {
+			hunk.OldStart = oldBefore
+		}
+		if hunk.NewCount > 0 {
+			hunk.NewStart = newBefore + 1
+		} else {
+			hunk.NewStart = newBefore
+		}
+		hunks = append(hunks, hunk)
+		i = end
 	}
 
 	result.Hunks = hunks
@@ -618,6 +715,8 @@ func writePlain(w io.Writer, result *DiffResult, cfg Config) error {
 				fmt.Fprintf(w, "-%s\n", line.Content)
 			case "added":
 				fmt.Fprintf(w, "+%s\n", line.Content)
+			case "context":
+				fmt.Fprintf(w, " %s\n", line.Content)
 			}
 		}
 	}

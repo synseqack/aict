@@ -188,15 +188,11 @@ func TestBuildArgs(t *testing.T) {
 			},
 		},
 		{
-			// cat -n is accepted by the parser but never read, so it is
-			// deliberately not advertised over MCP. See the SP4 parity
-			// report; this case pins that decision so the flag is not
-			// silently re-advertised before it is implemented.
-			name:     "cat line numbers are not advertised",
+			name:     "cat with line numbers",
 			toolName: "cat",
 			args:     map[string]interface{}{"lineNumbers": true, "files": []interface{}{"a.txt"}},
 			check: func(result []string) bool {
-				return !contains(result, "-n") && contains(result, "a.txt")
+				return contains(result, "-n") && contains(result, "a.txt")
 			},
 		},
 		{

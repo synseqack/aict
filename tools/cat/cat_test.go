@@ -227,3 +227,87 @@ func TestCat_EmptyFileEncoding(t *testing.T) {
 		t.Error("empty file should not be binary")
 	}
 }
+
+// -n populates the numbered view and leaves Content byte-identical, so an
+// existing consumer of the text sees no change.
+func TestCat_LineNumbers(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "n.txt", "one\ntwo\nthree\n")
+
+	result, err := catFile(path, Config{LineNumbers: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.NumberedLines) != 3 {
+		t.Fatalf("expected 3 numbered lines, got %d", len(result.NumberedLines))
+	}
+	for i, line := range result.NumberedLines {
+		if line.Number != i+1 {
+			t.Errorf("line %d reported number %d", i, line.Number)
+		}
+	}
+	if result.NumberedLines[1].Text != "two" {
+		t.Errorf("line 2 text = %q", result.NumberedLines[1].Text)
+	}
+	if result.Content != "one\ntwo\nthree\n" {
+		t.Errorf("Content must be unchanged, got %q", result.Content)
+	}
+}
+
+// Without -n the numbered view is empty: an agent that did not ask for
+// numbers must not pay for them.
+func TestCat_LineNumbersAbsentByDefault(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "n.txt", "one\ntwo\n")
+
+	result, err := catFile(path, Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.NumberedLines) != 0 {
+		t.Errorf("expected no numbered lines without -n, got %d", len(result.NumberedLines))
+	}
+}
+
+// Plain mode numbers lines in GNU's format; the numbered view is what makes
+// that possible without recounting Content.
+func TestCat_LineNumbersPlain(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "n.txt", "one\ntwo\nthree\n")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	err := Run([]string{path, "-n", "--plain"})
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	out.ReadFrom(r)
+
+	want := "     1\tone\n     2\ttwo\n     3\tthree\n"
+	if out.String() != want {
+		t.Errorf("plain -n output:\ngot:  %q\nwant: %q", out.String(), want)
+	}
+}
+
+// A trailing newline must not materialise as a phantom empty line: GNU cat
+// -n on "a\nb\n" prints two lines, not three.
+func TestCat_LineNumbersNoPhantomLine(t *testing.T) {
+	dir := t.TempDir()
+	path := createFile(t, dir, "n.txt", "a\nb\n")
+
+	result, err := catFile(path, Config{LineNumbers: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.NumberedLines) != 2 {
+		t.Errorf("expected 2 numbered lines for a 2-line file, got %d", len(result.NumberedLines))
+	}
+	if result.Lines != 2 {
+		t.Errorf("expected Lines=2, got %d", result.Lines)
+	}
+}

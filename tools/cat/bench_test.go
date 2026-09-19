@@ -41,7 +41,7 @@ func setupCatBenchData() {
 func BenchmarkCat_Stream_100k(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
-		_, _, _, err := readFileContent(catBenchLarge)
+		_, _, _, _, err := readFileContent(catBenchLarge)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func BenchmarkCat_SmallFile(b *testing.B) {
 	os.WriteFile(path, []byte("package main\n\nfunc main() {}\n"), 0644)
 	b.ResetTimer()
 	for b.Loop() {
-		_, _, _, err := readFileContent(path)
+		_, _, _, _, err := readFileContent(path)
 		if err != nil {
 			b.Fatal(err)
 		}

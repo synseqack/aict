@@ -33,6 +33,8 @@ func init() {
 		"ma":   "modified_ago_s",
 		"ct":   "content",
 		"f":    "file",
+		"num":  "number",
+		"txt":  "text",
 		"e":    "error",
 		"c":    "code",
 		"msg":  "msg",
@@ -41,7 +43,7 @@ func init() {
 }
 
 type Config struct {
-	LineNumbers bool
+	LineNumbers bool `flag:"" desc:"Number each output line"`
 	XML         bool
 	JSON        bool
 	Plain       bool
@@ -51,20 +53,29 @@ type Config struct {
 }
 
 type CatResult struct {
-	XMLName      xml.Name    `xml:"cat" json:"-"`
-	Path         string      `xml:"path,attr" json:"p"`
-	Absolute     string      `xml:"absolute,attr" json:"a"`
-	SizeBytes    int64       `xml:"size_bytes,attr" json:"s"`
-	Lines        int         `xml:"lines,attr" json:"ln"`
-	Encoding     string      `xml:"encoding,attr" json:"enc"`
-	Language     string      `xml:"language,attr" json:"lang"`
-	Binary       xmlout.Bool `xml:"binary,attr" json:"bin"`
-	MIME         string      `xml:"mime,attr" json:"mime"`
-	Modified     int64       `xml:"modified,attr" json:"m"`
-	ModifiedAgoS int64       `xml:"modified_ago_s,attr" json:"ma"`
-	Content      string      `xml:"content,omitempty" json:"ct"`
-	Files        []CatResult `xml:"file,omitempty" json:"f"`
-	Errors       []CatError  `xml:"error,omitempty" json:"e"`
+	XMLName       xml.Name       `xml:"cat" json:"-"`
+	Path          string         `xml:"path,attr" json:"p"`
+	Absolute      string         `xml:"absolute,attr" json:"a"`
+	SizeBytes     int64          `xml:"size_bytes,attr" json:"s"`
+	Lines         int            `xml:"lines,attr" json:"ln"`
+	Encoding      string         `xml:"encoding,attr" json:"enc"`
+	Language      string         `xml:"language,attr" json:"lang"`
+	Binary        xmlout.Bool    `xml:"binary,attr" json:"bin"`
+	MIME          string         `xml:"mime,attr" json:"mime"`
+	Modified      int64          `xml:"modified,attr" json:"m"`
+	ModifiedAgoS  int64          `xml:"modified_ago_s,attr" json:"ma"`
+	Content       string         `xml:"content,omitempty" json:"ct"`
+	NumberedLines []NumberedLine `xml:"line,omitempty" json:"lines,omitempty"`
+	Files         []CatResult    `xml:"file,omitempty" json:"f"`
+	Errors        []CatError     `xml:"error,omitempty" json:"e"`
+}
+
+// NumberedLine is one line of Content with its 1-based position, emitted when
+// cat runs with -n so an agent can cite file:line without recounting.
+type NumberedLine struct {
+	XMLName xml.Name `xml:"line" json:"-"`
+	Number  int      `xml:"number,attr" json:"num"`
+	Text    string   `xml:"text,attr" json:"txt"`
 }
 
 func (*CatResult) isCatResult() {}
@@ -199,44 +210,53 @@ func catFile(path string, cfg Config) (*CatResult, error) {
 		return result, nil
 	}
 
-	encoding, content, lines, err := readFileContent(resolved.Absolute)
+	encoding, content, lineCount, allLines, err := readFileContent(resolved.Absolute)
 	if err != nil {
 		result.Errors = append(result.Errors, CatError{Code: 1, Msg: err.Error(), Path: resolved.Absolute})
 		return result, nil
 	}
 
 	result.Encoding = encoding
-	result.Lines = lines
+	result.Lines = lineCount
 	result.Content = content
+
+	// Content stays byte-identical with and without -n; the numbered view is
+	// additive so an existing consumer still finds the text it expects.
+	if cfg.LineNumbers {
+		result.NumberedLines = make([]NumberedLine, len(allLines))
+		for i, line := range allLines {
+			result.NumberedLines[i] = NumberedLine{Number: i + 1, Text: line}
+		}
+	}
 
 	return result, nil
 }
 
-func readFileContent(path string) (encoding string, content string, lines int, err error) {
+func readFileContent(path string) (encoding string, content string, lineCount int, allLines []string, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "binary", "", 0, err
+		return "binary", "", 0, nil, err
 	}
 	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil {
-		return "binary", "", 0, err
+		return "binary", "", 0, nil, err
 	}
 
 	if info.Size() == 0 {
-		return "utf-8", "", 0, nil
+		return "utf-8", "", 0, nil, nil
 	}
 
 	header := make([]byte, 512)
 	n, err := f.Read(header)
 	if err != nil && err != io.EOF {
-		return "binary", "", 0, err
+		return "binary", "", 0, nil, err
 	}
 	header = header[:n]
 
 	if isBinaryContent(header) {
-		return "binary", "", 0, nil
+		return "binary", "", 0, nil, nil
 	}
 
 	// Plain UTF-8 is the default; only a BOM upgrades it.
@@ -256,8 +276,6 @@ func readFileContent(path string) (encoding string, content string, lines int, e
 		scanner.Buffer(buf, 1024*1024)
 	}
 
-	lineCount := 0
-	var allLines []string
 	var contentBuilder strings.Builder
 	maxContentSize := 5 * 1024 * 1024
 
@@ -278,7 +296,7 @@ func readFileContent(path string) (encoding string, content string, lines int, e
 	}
 
 	if err := scanner.Err(); err != nil {
-		return encoding, "", lineCount, err
+		return encoding, "", lineCount, nil, err
 	}
 
 	if encoding == "utf-8-bom" {
@@ -289,11 +307,11 @@ func readFileContent(path string) (encoding string, content string, lines int, e
 			}
 			buf.WriteString(line)
 		}
-		return encoding, buf.String(), lineCount, nil
+		return encoding, buf.String(), lineCount, allLines, nil
 	}
 
 	if isLargeFile {
-		return encoding, contentBuilder.String(), lineCount, nil
+		return encoding, contentBuilder.String(), lineCount, allLines, nil
 	}
 
 	content = strings.Join(allLines, "\n")
@@ -301,7 +319,7 @@ func readFileContent(path string) (encoding string, content string, lines int, e
 		content += "\n"
 	}
 
-	return encoding, content, lineCount, nil
+	return encoding, content, lineCount, allLines, nil
 }
 
 func isBinaryContent(data []byte) bool {
@@ -365,8 +383,7 @@ func writePlain(w io.Writer, result *CatResult) error {
 	}
 
 	if len(result.Files) == 0 {
-		_, err := io.WriteString(w, result.Content)
-		return err
+		return writePlainOne(w, result)
 	}
 
 	for _, f := range result.Files {
@@ -376,11 +393,25 @@ func writePlain(w io.Writer, result *CatResult) error {
 			}
 			continue
 		}
-		_, err := io.WriteString(w, f.Content)
-		if err != nil {
+		if err := writePlainOne(w, &f); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+// writePlainOne emits one file, numbered when -n asked for numbers.
+func writePlainOne(w io.Writer, result *CatResult) error {
+	if len(result.NumberedLines) == 0 {
+		_, err := io.WriteString(w, result.Content)
+		return err
+	}
+
+	for _, line := range result.NumberedLines {
+		if _, err := fmt.Fprintf(w, "%6d\t%s\n", line.Number, line.Text); err != nil {
+			return err
+		}
+	}
 	return nil
 }

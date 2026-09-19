@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [3.0.0] - 2026-09-19
+
 ### Added
 - MCP server: every tool's input schema now advertises its positional
   inputs (`paths`, `pattern`, `old`/`new`, `archive`, …) with the order the
@@ -121,6 +125,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accepted on the command line for compatibility. (`cat -n`, `checksums -c`,
   and `diff -U` were on this list too; all three are implemented above and
   advertised again.)
+
+The major bump is for the `--json` boolean change under Changed above:
+`--json` consumers that compared booleans as strings need updating.
 
 ## [2.2.0] - 2026-09-01
 

@@ -389,6 +389,12 @@ func LanguageFromFile(path string) string {
 		return lang
 	}
 
+	// Shebang sniffing needs the first line; a FIFO would block on that read
+	// forever. Extension lookup already had its chance, so give up.
+	if nonRegular(path) {
+		return ""
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return ""

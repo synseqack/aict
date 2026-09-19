@@ -7,7 +7,24 @@ import (
 	"strings"
 )
 
+// nonRegular reports whether path is something we must never read from.
+// FIFOs, devices, and sockets open successfully but block on read; directories
+// open but fail with EISDIR. Symlinks are followed so a link to a regular file
+// still gets sniffed. A path we could not stat at all is left to the caller's
+// Open, which will produce a real error.
+func nonRegular(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.Mode().IsRegular()
+}
+
 func MIME(path string) string {
+	if nonRegular(path) {
+		return "application/octet-stream"
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return "application/octet-stream"
@@ -113,6 +130,10 @@ func IsBinary(mime string) bool {
 }
 
 func DetectFromFile(path string) (mime string, isBinary bool, err error) {
+	if nonRegular(path) {
+		return "application/octet-stream", true, nil
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return "application/octet-stream", true, err

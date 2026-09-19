@@ -227,7 +227,7 @@ func getCharset(path string, isBinary bool) string {
 
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return "binary"
 	}
 	buf = buf[:n]

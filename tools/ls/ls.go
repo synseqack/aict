@@ -86,8 +86,8 @@ type LSResult struct {
 	Path         string        `xml:"path,attr" json:"p"`
 	Absolute     string        `xml:"absolute,attr" json:"a"`
 	TotalEntries int           `xml:"total_entries,attr" json:"n"`
-	Hidden       bool          `xml:"hidden,attr" json:"h"`
-	Recursive    bool          `xml:"recursive,attr" json:"r"`
+	Hidden       xmlout.Bool   `xml:"hidden,attr" json:"h"`
+	Recursive    xmlout.Bool   `xml:"recursive,attr" json:"r"`
 	Timestamp    int64         `xml:"timestamp,attr" json:"t"`
 	Entries      []interface{} `xml:",any" json:"ent"`
 	Errors       []LSError     `xml:"error,omitempty" json:"err"`
@@ -96,23 +96,23 @@ type LSResult struct {
 func (*LSResult) isLSItem() {}
 
 type FileEntry struct {
-	XMLName      xml.Name `xml:"file" json:"-"`
-	Name         string   `xml:"name,attr" json:"n"`
-	Path         string   `xml:"path,attr" json:"p"`
-	Absolute     string   `xml:"absolute,attr" json:"a"`
-	SizeBytes    uint64   `xml:"size_bytes,attr" json:"s"`
-	SizeHuman    string   `xml:"size_human,attr" json:"sh"`
-	Modified     int64    `xml:"modified,attr" json:"m"`
-	ModifiedAgoS int64    `xml:"modified_ago_s,attr" json:"ma"`
-	Permissions  string   `xml:"permissions,attr" json:"per"`
-	Mode         string   `xml:"mode,attr" json:"mo"`
-	Owner        string   `xml:"owner,attr" json:"o"`
-	Group        string   `xml:"group,attr" json:"g"`
-	Executable   string   `xml:"executable,attr" json:"exe"`
-	Symlink      string   `xml:"symlink,attr" json:"sym"`
-	MIME         string   `xml:"mime,attr" json:"mime"`
-	Language     string   `xml:"language,attr" json:"lang"`
-	Binary       string   `xml:"binary,attr" json:"bin"`
+	XMLName      xml.Name    `xml:"file" json:"-"`
+	Name         string      `xml:"name,attr" json:"n"`
+	Path         string      `xml:"path,attr" json:"p"`
+	Absolute     string      `xml:"absolute,attr" json:"a"`
+	SizeBytes    uint64      `xml:"size_bytes,attr" json:"s"`
+	SizeHuman    string      `xml:"size_human,attr" json:"sh"`
+	Modified     int64       `xml:"modified,attr" json:"m"`
+	ModifiedAgoS int64       `xml:"modified_ago_s,attr" json:"ma"`
+	Permissions  string      `xml:"permissions,attr" json:"per"`
+	Mode         string      `xml:"mode,attr" json:"mo"`
+	Owner        string      `xml:"owner,attr" json:"o"`
+	Group        string      `xml:"group,attr" json:"g"`
+	Executable   xmlout.Bool `xml:"executable,attr" json:"exe"`
+	Symlink      xmlout.Bool `xml:"symlink,attr" json:"sym"`
+	MIME         string      `xml:"mime,attr" json:"mime"`
+	Language     string      `xml:"language,attr" json:"lang"`
+	Binary       xmlout.Bool `xml:"binary,attr" json:"bin"`
 }
 
 func (FileEntry) isLSItem() {}
@@ -132,16 +132,16 @@ type DirEntry struct {
 func (DirEntry) isLSItem() {}
 
 type SymlinkEntry struct {
-	XMLName        xml.Name `xml:"symlink" json:"-"`
-	Name           string   `xml:"name,attr" json:"n"`
-	Path           string   `xml:"path,attr" json:"p"`
-	Target         string   `xml:"target,attr" json:"tgt"`
-	TargetAbsolute string   `xml:"target_absolute,attr" json:"ta"`
-	TargetExists   string   `xml:"target_exists,attr" json:"te"`
-	Modified       int64    `xml:"modified,attr" json:"m"`
-	ModifiedAgoS   int64    `xml:"modified_ago_s,attr" json:"ma"`
-	Permissions    string   `xml:"permissions,attr" json:"per"`
-	Mode           string   `xml:"mode,attr" json:"mo"`
+	XMLName        xml.Name    `xml:"symlink" json:"-"`
+	Name           string      `xml:"name,attr" json:"n"`
+	Path           string      `xml:"path,attr" json:"p"`
+	Target         string      `xml:"target,attr" json:"tgt"`
+	TargetAbsolute string      `xml:"target_absolute,attr" json:"ta"`
+	TargetExists   xmlout.Bool `xml:"target_exists,attr" json:"te"`
+	Modified       int64       `xml:"modified,attr" json:"m"`
+	ModifiedAgoS   int64       `xml:"modified_ago_s,attr" json:"ma"`
+	Permissions    string      `xml:"permissions,attr" json:"per"`
+	Mode           string      `xml:"mode,attr" json:"mo"`
 }
 
 func (SymlinkEntry) isLSItem() {}
@@ -249,8 +249,8 @@ func listDir(inputPath string, cfg Config) (*LSResult, error) {
 			Path:         resolved.Given,
 			Absolute:     resolved.Absolute,
 			TotalEntries: 1,
-			Hidden:       cfg.All || cfg.AlmostAll,
-			Recursive:    cfg.Recursive,
+			Hidden:       xmlout.Bool(cfg.All || cfg.AlmostAll),
+			Recursive:    xmlout.Bool(cfg.Recursive),
 			Timestamp:    meta.Now(),
 			Entries:      []interface{}{entry},
 		}, nil
@@ -259,8 +259,8 @@ func listDir(inputPath string, cfg Config) (*LSResult, error) {
 	result := &LSResult{
 		Path:      resolved.Given,
 		Absolute:  resolved.Absolute,
-		Hidden:    cfg.All || cfg.AlmostAll,
-		Recursive: cfg.Recursive,
+		Hidden:    xmlout.Bool(cfg.All || cfg.AlmostAll),
+		Recursive: xmlout.Bool(cfg.Recursive),
 		Timestamp: meta.Now(),
 	}
 
@@ -335,8 +335,8 @@ func populateDir(result *LSResult, dirPath string, cfg Config) error {
 				subResult := &LSResult{
 					Path:      fe.name,
 					Absolute:  fe.path,
-					Hidden:    cfg.All || cfg.AlmostAll,
-					Recursive: cfg.Recursive,
+					Hidden:    xmlout.Bool(cfg.All || cfg.AlmostAll),
+					Recursive: xmlout.Bool(cfg.Recursive),
 					Timestamp: meta.Now(),
 				}
 				if err := populateDir(subResult, fe.path, cfg); err != nil {
@@ -391,7 +391,7 @@ func buildEntry(fullPath string, info fs.FileInfo, name string, cfg Config) (LSI
 			Path:           fullPath,
 			Target:         target,
 			TargetAbsolute: targetAbs,
-			TargetExists:   strconv.FormatBool(targetExists),
+			TargetExists:   xmlout.Bool(targetExists),
 			Modified:       modTime,
 			ModifiedAgoS:   meta.AgoSeconds(modTime),
 			Permissions:    perms,
@@ -440,11 +440,11 @@ func buildEntry(fullPath string, info fs.FileInfo, name string, cfg Config) (LSI
 		Mode:         modeStr,
 		Owner:        owner,
 		Group:        group,
-		Executable:   strconv.FormatBool(mode&0111 != 0),
-		Symlink:      "false",
+		Executable:   xmlout.Bool(mode&0111 != 0),
+		Symlink:      false,
 		MIME:         mime,
 		Language:     language,
-		Binary:       strconv.FormatBool(isBinary),
+		Binary:       xmlout.Bool(isBinary),
 	}, nil
 }
 
@@ -543,7 +543,7 @@ func writePlain(w io.Writer, result *LSResult) error {
 			fmt.Fprintln(w, line)
 		case SymlinkEntry:
 			target := entry.Target
-			if entry.TargetExists != "true" {
+			if !bool(entry.TargetExists) {
 				target += " -> [broken]"
 			}
 			line := fmt.Sprintf("%s %s %s -> %s",

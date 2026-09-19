@@ -65,7 +65,7 @@ func TestLS_Basic(t *testing.T) {
 				if entry.Language != "text" {
 					t.Errorf("hello.txt language: expected 'text', got %q", entry.Language)
 				}
-				if entry.Binary != "false" {
+				if entry.Binary {
 					t.Errorf("hello.txt should not be binary")
 				}
 			}
@@ -161,7 +161,7 @@ func TestLS_Symlinks(t *testing.T) {
 			if entry.Name != "link.txt" {
 				t.Errorf("expected symlink name 'link.txt', got %q", entry.Name)
 			}
-			if entry.TargetExists != "true" {
+			if !entry.TargetExists {
 				t.Error("expected symlink target to exist")
 			}
 		}
@@ -340,7 +340,7 @@ func TestLS_Permissions(t *testing.T) {
 	for _, e := range result.Entries {
 		if entry, ok := e.(FileEntry); ok {
 			if entry.Name == "script.sh" {
-				if entry.Executable != "true" {
+				if !entry.Executable {
 					t.Error("expected script.sh to be executable")
 				}
 				if !strings.HasPrefix(entry.Permissions, "-rwx") {
@@ -372,7 +372,7 @@ func TestLS_BinaryFile(t *testing.T) {
 	for _, e := range result.Entries {
 		if entry, ok := e.(FileEntry); ok {
 			if entry.Name == "binary.bin" {
-				if entry.Binary != "true" {
+				if !entry.Binary {
 					t.Error("expected binary.bin to be marked as binary")
 				}
 			}
@@ -463,7 +463,7 @@ func TestLS_BrokenSymlink(t *testing.T) {
 		if entry, ok := e.(SymlinkEntry); ok {
 			if entry.Name == "broken_link" {
 				foundSymlink = true
-				if entry.TargetExists != "false" {
+				if entry.TargetExists {
 					t.Errorf("expected TargetExists=false for broken symlink")
 				}
 			}
@@ -487,5 +487,67 @@ func TestLS_LargeDirectory(t *testing.T) {
 
 	if result.TotalEntries < 26 {
 		t.Errorf("expected at least 26 entries (deduplication), got %d", result.TotalEntries)
+	}
+}
+
+func TestLS_CompactPreservesBooleanValuedNames(t *testing.T) {
+	prev := os.Getenv("AICT_NOCOMPACT")
+	os.Unsetenv("AICT_NOCOMPACT")
+	defer os.Setenv("AICT_NOCOMPACT", prev)
+
+	dir := t.TempDir()
+	for _, name := range []string{"true", "false"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	out, err := runLS([]string{dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"true", "false"} {
+		if !strings.Contains(out, `name="`+name+`"`) {
+			t.Errorf("name %q was corrupted in compact output: %s", name, out)
+		}
+	}
+	// Booleans on the same elements must still compact: this is the positive
+	// control proving xmlout.Bool does the work the deleted regex used to.
+	if !strings.Contains(out, `bin="0"`) {
+		t.Errorf("binary should compact to 0, got: %s", out)
+	}
+}
+
+func TestLS_CompactSymlinkTargetNamedTrue(t *testing.T) {
+	prev := os.Getenv("AICT_NOCOMPACT")
+	os.Unsetenv("AICT_NOCOMPACT")
+	defer os.Setenv("AICT_NOCOMPACT", prev)
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "true"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "link")
+	// A RELATIVE target named "true": os.Readlink returns it verbatim, so
+	// Target's value is exactly "true" and the old ="true" regex rewrote it to
+	// "1". An absolute target (/tmp/.../true) would never match that regex and
+	// would prove nothing.
+	if err := os.Symlink("true", link); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+
+	out, err := runLS([]string{dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The target is a VALUE and must survive; the existence flag is a boolean
+	// and must still compact.
+	if !strings.Contains(out, `tgt="true"`) {
+		t.Errorf("target was corrupted in compact output: %s", out)
+	}
+	if !strings.Contains(out, `te="1"`) {
+		t.Errorf("target_exists should compact to 1, got: %s", out)
 	}
 }

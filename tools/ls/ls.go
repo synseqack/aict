@@ -416,7 +416,7 @@ func buildEntry(fullPath string, info fs.FileInfo, name string, cfg Config) (LSI
 	isBinary := true
 	language := ""
 
-	if !cfg.Plain {
+	if mode.IsRegular() && !cfg.Plain {
 		mime, isBinary, _ = detect.DetectFromFile(fullPath)
 		if !isBinary {
 			language = detect.LanguageFromFile(fullPath)

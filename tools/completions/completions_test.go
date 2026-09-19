@@ -2,9 +2,9 @@ package completions
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
-	"os"
 )
 
 func runCompletions(args []string) (string, error) {

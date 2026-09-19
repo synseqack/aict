@@ -18,17 +18,17 @@ func init() {
 	tool.RegisterMeta("uniq", tool.GenerateSchema("uniq", "Report or filter out repeated lines", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"lin":"lines_in",
-		"lout":"lines_out",
-		"dr": "duplicates_removed",
-		"ct": "content",
-		"d":  "duplicate",
-		"l":  "line",
-		"cnt":"count",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":    "timestamp",
+		"lin":  "lines_in",
+		"lout": "lines_out",
+		"dr":   "duplicates_removed",
+		"ct":   "content",
+		"d":    "duplicate",
+		"l":    "line",
+		"cnt":  "count",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("uniq", dict)
 }
@@ -42,7 +42,7 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	NoCompact bool
+	NoCompact  bool
 	Dict       bool
 }
 

@@ -21,11 +21,11 @@ func init() {
 	tool.Register("awk", Run)
 	tool.RegisterMeta("awk", tool.GenerateSchema("awk", "Extract fields and apply pattern-action rules to file contents", Config{}))
 	xmlout.RegisterDict("awk", map[string]string{
-		"p": "program",
+		"p":  "program",
 		"fs": "field_sep",
 		"tl": "total_lines",
-		"n": "number",
-		"o": "output",
+		"n":  "number",
+		"o":  "output",
 	})
 }
 

@@ -21,21 +21,21 @@ func init() {
 	tool.RegisterMeta("cat", tool.GenerateSchema("cat", "Read and output file contents with metadata", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"s":  "size_bytes",
-		"ln": "lines",
-		"enc":"encoding",
-		"lang":"language",
-		"bin":"binary",
-		"mime":"mime",
-		"m":  "modified",
-		"ma": "modified_ago_s",
-		"ct": "content",
-		"f":  "file",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"s":    "size_bytes",
+		"ln":   "lines",
+		"enc":  "encoding",
+		"lang": "language",
+		"bin":  "binary",
+		"mime": "mime",
+		"m":    "modified",
+		"ma":   "modified_ago_s",
+		"ct":   "content",
+		"f":    "file",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("cat", dict)
 }
@@ -46,7 +46,7 @@ type Config struct {
 	JSON        bool
 	Plain       bool
 	Pretty      bool
-	NoCompact  bool
+	NoCompact   bool
 	Dict        bool
 }
 
@@ -382,4 +382,3 @@ func writePlain(w io.Writer, result *CatResult) error {
 
 	return nil
 }
-

@@ -22,27 +22,27 @@ func init() {
 	tool.RegisterMeta("diff", tool.GenerateSchema("diff", "Compare two files or directories and show differences", Config{}))
 
 	dict := map[string]string{
-		"of": "old_file",
-		"nf": "new_file",
-		"ol": "old_label",
-		"nl": "new_label",
-		"al": "added_lines",
-		"rl": "removed_lines",
-		"ch": "changed_hunks",
-		"id": "identical",
-		"t":  "timestamp",
-		"h":  "hunk",
-		"os": "old_start",
-		"oc": "old_count",
-		"ns": "new_start",
-		"nc": "new_count",
-		"l":  "line",
-		"ty": "type",
-		"num":"number",
-		"ct": "content",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"of":  "old_file",
+		"nf":  "new_file",
+		"ol":  "old_label",
+		"nl":  "new_label",
+		"al":  "added_lines",
+		"rl":  "removed_lines",
+		"ch":  "changed_hunks",
+		"id":  "identical",
+		"t":   "timestamp",
+		"h":   "hunk",
+		"os":  "old_start",
+		"oc":  "old_count",
+		"ns":  "new_start",
+		"nc":  "new_count",
+		"l":   "line",
+		"ty":  "type",
+		"num": "number",
+		"ct":  "content",
+		"e":   "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("diff", dict)
 }
@@ -59,7 +59,7 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
-	NoCompact     bool
+	NoCompact      bool
 	Dict           bool
 }
 

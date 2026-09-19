@@ -17,24 +17,24 @@ func init() {
 	tool.RegisterMeta("dirname", tool.GenerateSchema("dirname", "Print directory portion of file paths", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"e":  "entry",
-		"p":  "path",
-		"dir":"dir",
-		"err":"error",
-		"c":  "code",
-		"msg":"msg",
+		"t":   "timestamp",
+		"e":   "entry",
+		"p":   "path",
+		"dir": "dir",
+		"err": "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("dirname", dict)
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type DirnameResult struct {

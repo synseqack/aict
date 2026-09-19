@@ -23,34 +23,34 @@ func init() {
 	tool.RegisterMeta("stat", tool.GenerateSchema("stat", "Display detailed file metadata including timestamps, permissions, and ownership", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"ino":"inode",
-		"lnk":"links",
-		"dev":"device",
-		"per":"permissions",
-		"mo": "mode_octal",
-		"uid":"uid",
-		"gid":"gid",
-		"o":  "owner",
-		"g":  "group",
-		"s":  "size_bytes",
-		"sh": "size_human",
-		"at": "atime",
-		"aat":"atime_ago_s",
-		"mt": "mtime",
-		"mat":"mtime_ago_s",
-		"ct": "ctime",
-		"cat":"ctime_ago_s",
-		"b":  "birth",
-		"ba": "birth_ago_s",
-		"ty": "type",
-		"mime":"mime",
-		"lang":"language",
-		"t":  "timestamp",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"ino":  "inode",
+		"lnk":  "links",
+		"dev":  "device",
+		"per":  "permissions",
+		"mo":   "mode_octal",
+		"uid":  "uid",
+		"gid":  "gid",
+		"o":    "owner",
+		"g":    "group",
+		"s":    "size_bytes",
+		"sh":   "size_human",
+		"at":   "atime",
+		"aat":  "atime_ago_s",
+		"mt":   "mtime",
+		"mat":  "mtime_ago_s",
+		"ct":   "ctime",
+		"cat":  "ctime_ago_s",
+		"b":    "birth",
+		"ba":   "birth_ago_s",
+		"ty":   "type",
+		"mime": "mime",
+		"lang": "language",
+		"t":    "timestamp",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("stat", dict)
 }
@@ -61,7 +61,7 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
-	NoCompact     bool
+	NoCompact      bool
 	Dict           bool
 }
 

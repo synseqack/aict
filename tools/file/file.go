@@ -19,31 +19,31 @@ func init() {
 	tool.RegisterMeta("file", tool.GenerateSchema("file", "Determine file type using MIME detection and content analysis", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"ty": "type",
-		"mime":"mime",
-		"cat":"category",
-		"lang":"language",
-		"chs":"charset",
-		"exe":"executable",
-		"t":  "timestamp",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"ty":   "type",
+		"mime": "mime",
+		"cat":  "category",
+		"lang": "language",
+		"chs":  "charset",
+		"exe":  "executable",
+		"t":    "timestamp",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("file", dict)
 }
 
 type Config struct {
-	Brief  bool `flag:"" desc:"Show brief file type only"`
-	MIME   bool `flag:"" desc:"Show MIME type only"`
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	Brief     bool `flag:"" desc:"Show brief file type only"`
+	MIME      bool `flag:"" desc:"Show MIME type only"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type FileResult struct {

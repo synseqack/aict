@@ -39,7 +39,7 @@ func setupCatBenchData() {
 }
 
 func BenchmarkCat_Stream_100k(b *testing.B) {
-b.ResetTimer()
+	b.ResetTimer()
 	for b.Loop() {
 		_, _, _, err := readFileContent(catBenchLarge)
 		if err != nil {
@@ -49,7 +49,7 @@ b.ResetTimer()
 }
 
 func BenchmarkCat_BinaryDetect(b *testing.B) {
-// Benchmark just the binary-detection scan on a 512-byte header.
+	// Benchmark just the binary-detection scan on a 512-byte header.
 	header := make([]byte, 512)
 	b.ResetTimer()
 	for b.Loop() {

@@ -18,15 +18,15 @@ func init() {
 	tool.RegisterMeta("basename", tool.GenerateSchema("basename", "Print filename portion of file paths", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"e":  "entry",
-		"p":  "path",
-		"b":  "base",
-		"stm":"stem",
-		"ext":"extension",
-		"err":"error",
-		"c":  "code",
-		"msg":"msg",
+		"t":   "timestamp",
+		"e":   "entry",
+		"p":   "path",
+		"b":   "base",
+		"stm": "stem",
+		"ext": "extension",
+		"err": "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("basename", dict)
 }

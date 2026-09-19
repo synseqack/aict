@@ -20,18 +20,18 @@ func init() {
 	tool.RegisterMeta("du", tool.GenerateSchema("du", "Estimate disk usage of directories and files", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"tb": "total_bytes",
-		"th": "total_human",
-		"e":  "entry",
-		"p":  "path",
-		"a":  "absolute",
-		"s":  "size_bytes",
-		"sh": "size_human",
-		"d":  "depth",
-		"err":"error",
-		"c":  "code",
-		"msg":"msg",
+		"t":   "timestamp",
+		"tb":  "total_bytes",
+		"th":  "total_human",
+		"e":   "entry",
+		"p":   "path",
+		"a":   "absolute",
+		"s":   "size_bytes",
+		"sh":  "size_human",
+		"d":   "depth",
+		"err": "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("du", dict)
 }
@@ -45,7 +45,7 @@ type Config struct {
 	JSON      bool
 	Plain     bool
 	Pretty    bool
-	NoCompact  bool
+	NoCompact bool
 	Dict      bool
 }
 

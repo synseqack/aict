@@ -20,11 +20,11 @@ func init() {
 	tool.Register("sed", Run)
 	tool.RegisterMeta("sed", tool.GenerateSchema("sed", "Apply sed-style transformations to file contents (s, d, p, q commands)", Config{}))
 	xmlout.RegisterDict("sed", map[string]string{
-		"s": "script",
+		"s":  "script",
 		"lr": "lines_read",
 		"lo": "lines_output",
 		"su": "substitutions",
-		"n": "number",
+		"n":  "number",
 		"ct": "content",
 		"ch": "changed",
 	})

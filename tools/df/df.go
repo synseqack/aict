@@ -16,25 +16,25 @@ func init() {
 	tool.RegisterMeta("df", tool.GenerateSchema("df", "Display disk filesystem usage statistics", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"fss":"filesystems",
-		"dev":"device",
-		"mnt":"mount",
-		"ty": "type",
-		"s":  "size_bytes",
-		"sh": "size_human",
-		"ub": "used_bytes",
-		"uh": "used_human",
-		"ab": "avail_bytes",
-		"ah": "avail_human",
-		"up": "use_pct",
-		"it": "inodes_total",
-		"iu": "inodes_used",
-		"ia": "inodes_avail",
-		"ip": "inodes_pct",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":   "timestamp",
+		"fss": "filesystems",
+		"dev": "device",
+		"mnt": "mount",
+		"ty":  "type",
+		"s":   "size_bytes",
+		"sh":  "size_human",
+		"ub":  "used_bytes",
+		"uh":  "used_human",
+		"ab":  "avail_bytes",
+		"ah":  "avail_human",
+		"up":  "use_pct",
+		"it":  "inodes_total",
+		"iu":  "inodes_used",
+		"ia":  "inodes_avail",
+		"ip":  "inodes_pct",
+		"e":   "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("df", dict)
 }
@@ -45,7 +45,7 @@ type Config struct {
 	JSON      bool
 	Plain     bool
 	Pretty    bool
-	NoCompact  bool
+	NoCompact bool
 	Dict      bool
 }
 

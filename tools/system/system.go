@@ -19,39 +19,39 @@ func init() {
 	tool.RegisterMeta("system", tool.GenerateSchema("system", "Display system information including user, OS, and runtime details", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"u":  "user",
-		"un": "username",
-		"uid":"uid",
-		"gid":"gid",
-		"h":  "home",
-		"sh": "shell",
-		"grp":"group",
-		"os": "os",
-		"goos":"goos",
-		"arc":"goarch",
-		"hn": "hostname",
-		"kern":"kernel",
-		"rel":"os_release",
-		"dist":"distro",
-		"r":  "runtime",
-		"ver":"version",
-		"ncpu":"num_cpu",
-		"ngr": "num_goroutine",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":    "timestamp",
+		"u":    "user",
+		"un":   "username",
+		"uid":  "uid",
+		"gid":  "gid",
+		"h":    "home",
+		"sh":   "shell",
+		"grp":  "group",
+		"os":   "os",
+		"goos": "goos",
+		"arc":  "goarch",
+		"hn":   "hostname",
+		"kern": "kernel",
+		"rel":  "os_release",
+		"dist": "distro",
+		"r":    "runtime",
+		"ver":  "version",
+		"ncpu": "num_cpu",
+		"ngr":  "num_goroutine",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("system", dict)
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type SystemResult struct {

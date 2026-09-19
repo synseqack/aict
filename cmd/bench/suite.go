@@ -27,14 +27,14 @@ type BenchmarkReport struct {
 }
 
 type Suite struct {
-	Name        string    `xml:"name,attr"`
-	Description string    `xml:"description,attr"`
-	Pass        bool      `xml:"pass,attr"`
-	Baseline    Timing    `xml:"baseline"`
-	Plain       Variant   `xml:"plain"`
-	XML         Variant   `xml:"xml"`
-	Delta       *Delta    `xml:"delta,omitempty"`
-	Samples     []Sample  `xml:"observations>sample"`
+	Name        string   `xml:"name,attr"`
+	Description string   `xml:"description,attr"`
+	Pass        bool     `xml:"pass,attr"`
+	Baseline    Timing   `xml:"baseline"`
+	Plain       Variant  `xml:"plain"`
+	XML         Variant  `xml:"xml"`
+	Delta       *Delta   `xml:"delta,omitempty"`
+	Samples     []Sample `xml:"observations>sample"`
 }
 
 type Timing struct {
@@ -84,21 +84,21 @@ func buildSuites(dir, aictBin string, runs int, threshold float64) []Suite {
 	specs := []suiteSpec{
 		{
 			name: "ls", desc: "1000 Go source files",
-			note: "aict adds MIME/language detection per file",
+			note:  "aict adds MIME/language detection per file",
 			base:  []string{"ls", dir},
 			plain: []string{aictBin, "ls", dir, "--plain"},
 			xml:   []string{aictBin, "ls", dir, "--xml"},
 		},
 		{
 			name: "grep", desc: "pattern match across 100k-line file",
-			note: "GNU grep uses SIMD/Boyer-Moore; Go regexp is general-purpose",
+			note:  "GNU grep uses SIMD/Boyer-Moore; Go regexp is general-purpose",
 			base:  []string{"grep", "search", largeFile},
 			plain: []string{aictBin, "grep", "search", largeFile, "--plain"},
 			xml:   []string{aictBin, "grep", "search", largeFile, "--xml"},
 		},
 		{
 			name: "cat", desc: "stream 100k-line file",
-			note: "aict scans lines + detects binary/encoding; GNU cat is a raw copy",
+			note:  "aict scans lines + detects binary/encoding; GNU cat is a raw copy",
 			base:  []string{"cat", largeFile},
 			plain: []string{aictBin, "cat", largeFile, "--plain"},
 			xml:   []string{aictBin, "cat", largeFile, "--xml"},
@@ -111,7 +111,7 @@ func buildSuites(dir, aictBin string, runs int, threshold float64) []Suite {
 		},
 		{
 			name: "diff", desc: "1000-line files with 1 added line",
-			note: "Myers O(ND) algorithm; comparable to GNU diff",
+			note:  "Myers O(ND) algorithm; comparable to GNU diff",
 			base:  []string{"diff", f1, f2},
 			plain: []string{aictBin, "diff", f1, f2, "--plain"},
 			xml:   []string{aictBin, "diff", f1, f2, "--xml"},

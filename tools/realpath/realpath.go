@@ -17,26 +17,26 @@ func init() {
 	tool.RegisterMeta("realpath", tool.GenerateSchema("realpath", "Print resolved absolute paths", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"e":  "entry",
-		"p":  "path",
-		"a":  "absolute",
-		"ex": "exists",
-		"ty": "type",
-		"err":"error",
-		"c":  "code",
-		"msg":"msg",
+		"t":   "timestamp",
+		"e":   "entry",
+		"p":   "path",
+		"a":   "absolute",
+		"ex":  "exists",
+		"ty":  "type",
+		"err": "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("realpath", dict)
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type RealpathResult struct {

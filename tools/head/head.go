@@ -21,23 +21,23 @@ func init() {
 	tool.RegisterMeta("head", tool.GenerateSchema("head", "Display the first N lines of a file", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"lr": "lines_requested",
-		"br": "bytes_requested",
-		"lret":"lines_returned",
-		"bret":"bytes_returned",
-		"ftl":"file_total_lines",
-		"ftb":"file_total_bytes",
-		"trunc":"truncated",
-		"lang":"language",
-		"mime":"mime",
-		"ct": "content",
-		"f":  "file",
-		"t":  "timestamp",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":     "path",
+		"a":     "absolute",
+		"lr":    "lines_requested",
+		"br":    "bytes_requested",
+		"lret":  "lines_returned",
+		"bret":  "bytes_returned",
+		"ftl":   "file_total_lines",
+		"ftb":   "file_total_bytes",
+		"trunc": "truncated",
+		"lang":  "language",
+		"mime":  "mime",
+		"ct":    "content",
+		"f":     "file",
+		"t":     "timestamp",
+		"e":     "error",
+		"c":     "code",
+		"msg":   "msg",
 	}
 	xmlout.RegisterDict("head", dict)
 }
@@ -51,7 +51,7 @@ type Config struct {
 	JSON      bool
 	Plain     bool
 	Pretty    bool
-	NoCompact  bool
+	NoCompact bool
 	Dict      bool
 }
 

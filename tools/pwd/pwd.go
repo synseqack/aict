@@ -18,25 +18,25 @@ func init() {
 	tool.RegisterMeta("pwd", tool.GenerateSchema("pwd", "Print current working directory", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"h":  "home",
-		"rth":"relative_to_home",
-		"t":  "timestamp",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":   "path",
+		"a":   "absolute",
+		"h":   "home",
+		"rth": "relative_to_home",
+		"t":   "timestamp",
+		"e":   "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("pwd", dict)
 }
 
 type Config struct {
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type PwdResult struct {

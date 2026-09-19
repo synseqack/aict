@@ -18,14 +18,14 @@ func init() {
 	tool.Register("env", Run)
 	tool.RegisterMeta("env", tool.GenerateSchema("env", "Display environment variables with types and redaction", Config{}))
 	xmlout.RegisterDict("env", map[string]string{
-		"n": "name",
-		"v": "value",
+		"n":  "name",
+		"v":  "value",
 		"tp": "type",
 		"pr": "present",
-		"r": "redacted",
+		"r":  "redacted",
 		"pe": "path_exists",
-		"i": "index",
-		"e": "exists",
+		"i":  "index",
+		"e":  "exists",
 	})
 }
 

@@ -20,13 +20,13 @@ func init() {
 	tool.Register("doctor", Run)
 	tool.RegisterMeta("doctor", tool.GenerateSchema("doctor", "Run diagnostics to check aict installation and environment", Config{}))
 	xmlout.RegisterDict("doctor", map[string]string{
-		"v": "version",
-		"o": "os",
+		"v":  "version",
+		"o":  "os",
 		"ar": "arch",
 		"gv": "go_version",
 		"su": "summary",
 		"ap": "all_passed",
-		"m": "message",
+		"m":  "message",
 		"sv": "severity",
 	})
 }

@@ -22,27 +22,27 @@ func init() {
 	tool.RegisterMeta("diff", tool.GenerateSchema("diff", "Compare two files or directories and show differences", Config{}))
 
 	dict := map[string]string{
-		"of": "old_file",
-		"nf": "new_file",
-		"ol": "old_label",
-		"nl": "new_label",
-		"al": "added_lines",
-		"rl": "removed_lines",
-		"ch": "changed_hunks",
-		"id": "identical",
-		"t":  "timestamp",
-		"h":  "hunk",
-		"os": "old_start",
-		"oc": "old_count",
-		"ns": "new_start",
-		"nc": "new_count",
-		"l":  "line",
-		"ty": "type",
-		"num":"number",
-		"ct": "content",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"of":  "old_file",
+		"nf":  "new_file",
+		"ol":  "old_label",
+		"nl":  "new_label",
+		"al":  "added_lines",
+		"rl":  "removed_lines",
+		"ch":  "changed_hunks",
+		"id":  "identical",
+		"t":   "timestamp",
+		"h":   "hunk",
+		"os":  "old_start",
+		"oc":  "old_count",
+		"ns":  "new_start",
+		"nc":  "new_count",
+		"l":   "line",
+		"ty":  "type",
+		"num": "number",
+		"ct":  "content",
+		"e":   "error",
+		"c":   "code",
+		"msg": "msg",
 	}
 	xmlout.RegisterDict("diff", dict)
 }
@@ -59,7 +59,7 @@ type Config struct {
 	JSON           bool
 	Plain          bool
 	Pretty         bool
-	NoCompact     bool
+	NoCompact      bool
 	Dict           bool
 }
 
@@ -72,7 +72,7 @@ type DiffResult struct {
 	AddedLines   int         `xml:"added_lines,attr" json:"al"`
 	RemovedLines int         `xml:"removed_lines,attr" json:"rl"`
 	ChangedHunks int         `xml:"changed_hunks,attr" json:"ch"`
-	Identical    bool        `xml:"identical,attr" json:"id"`
+	Identical    xmlout.Bool `xml:"identical,attr" json:"id"`
 	Timestamp    int64       `xml:"timestamp,attr" json:"t"`
 	Hunks        []DiffHunk  `xml:"hunk" json:"h"`
 	Errors       []DiffError `xml:"error,omitempty" json:"e"`
@@ -368,7 +368,7 @@ func computeDiff(oldLines, newLines []string, oldName, newName string, cfg Confi
 	result.AddedLines = added
 	result.RemovedLines = removed
 	result.ChangedHunks = len(hunks)
-	result.Identical = added == 0 && removed == 0
+	result.Identical = xmlout.Bool(added == 0 && removed == 0)
 
 	return result
 }
@@ -551,7 +551,7 @@ func diffDirectories(oldDir, newDir string, cfg Config) error {
 	}
 
 	result.ChangedHunks = len(result.Hunks)
-	result.Identical = result.AddedLines == 0 && result.RemovedLines == 0
+	result.Identical = xmlout.Bool(result.AddedLines == 0 && result.RemovedLines == 0)
 
 	return outputResult(result, cfg)
 }
@@ -596,7 +596,7 @@ func writePlain(w io.Writer, result *DiffResult, cfg Config) error {
 		return nil
 	}
 
-	if cfg.Quiet && result.Identical {
+	if cfg.Quiet && bool(result.Identical) {
 		return nil
 	}
 
@@ -605,7 +605,7 @@ func writePlain(w io.Writer, result *DiffResult, cfg Config) error {
 		return nil
 	}
 
-	if result.Identical {
+	if bool(result.Identical) {
 		fmt.Fprintf(w, "No differences found\n")
 		return nil
 	}

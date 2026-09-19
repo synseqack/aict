@@ -18,30 +18,30 @@ func init() {
 	tool.RegisterMeta("tr", tool.GenerateSchema("tr", "Translate, squeeze, or delete characters from stdin", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"fr": "set1",
-		"to": "set2",
-		"lin":"lines_in",
-		"lout":"lines_out",
-		"ct": "content",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":    "timestamp",
+		"fr":   "set1",
+		"to":   "set2",
+		"lin":  "lines_in",
+		"lout": "lines_out",
+		"ct":   "content",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("tr", dict)
 }
 
 type Config struct {
-	Delete  bool `flag:"" desc:"Delete characters in set1"`
-	Squeeze bool `flag:"" desc:"Squeeze repeated characters"`
-	Set1    string
-	Set2    string
-	XML     bool
-	JSON    bool
-	Plain   bool
-	Pretty  bool
+	Delete    bool `flag:"" desc:"Delete characters in set1"`
+	Squeeze   bool `flag:"" desc:"Squeeze repeated characters"`
+	Set1      string
+	Set2      string
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict    bool
+	Dict      bool
 }
 
 type TrResult struct {

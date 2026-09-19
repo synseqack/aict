@@ -23,42 +23,42 @@ func init() {
 	tool.RegisterMeta("find", tool.GenerateSchema("find", "Find files by name, type, or modification time", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"t":  "timestamp",
-		"sr": "search_root",
-		"n":  "total_matches",
-		"s":  "size_bytes",
-		"m":  "modified",
-		"ma": "modified_ago_s",
-		"d":  "depth",
-		"lang":"language",
-		"mime":"mime",
-		"ty": "type",
-		"cond":"condition",
-		"neg":"negated",
-		"md": "maxdepth",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"t":    "timestamp",
+		"sr":   "search_root",
+		"n":    "total_matches",
+		"s":    "size_bytes",
+		"m":    "modified",
+		"ma":   "modified_ago_s",
+		"d":    "depth",
+		"lang": "language",
+		"mime": "mime",
+		"ty":   "type",
+		"cond": "condition",
+		"neg":  "negated",
+		"md":   "maxdepth",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("find", dict)
 }
 
 type Config struct {
-	Name     string `flag:"" desc:"File name pattern (supports * and ?)"`
-	Type     string `flag:"" desc:"File type: f (regular), d (directory), l (symlink)"`
-	MTime    int    `flag:"" desc:"Modified within N days"`
-	Size     int64  `flag:"" desc:"File size in bytes"`
-	MaxDepth int    `flag:"" desc:"Maximum directory depth"`
-	Invert   bool   `flag:"" desc:"Invert match conditions"`
-	Or       bool   `flag:"" desc:"OR between conditions"`
-	XML      bool
-	JSON     bool
-	Plain    bool
-	Pretty   bool
+	Name      string `flag:"" desc:"File name pattern (supports * and ?)"`
+	Type      string `flag:"" desc:"File type: f (regular), d (directory), l (symlink)"`
+	MTime     int    `flag:"" desc:"Modified within N days"`
+	Size      int64  `flag:"" desc:"File size in bytes"`
+	MaxDepth  int    `flag:"" desc:"Maximum directory depth"`
+	Invert    bool   `flag:"" desc:"Invert match conditions"`
+	Or        bool   `flag:"" desc:"OR between conditions"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict     bool
+	Dict      bool
 
 	// predicates preserves argument order and per-predicate negation
 	// (-not binds to the next predicate only, GNU find semantics).
@@ -86,10 +86,10 @@ type FindResult struct {
 func (*FindResult) isFindResult() {}
 
 type FindCondition struct {
-	XMLName xml.Name `xml:"condition"`
-	Type    string   `xml:"type,attr"`
-	Value   string   `xml:"value,attr"`
-	Negated string   `xml:"negated,attr,omitempty"`
+	XMLName xml.Name    `xml:"condition"`
+	Type    string      `xml:"type,attr"`
+	Value   string      `xml:"value,attr"`
+	Negated xmlout.Bool `xml:"negated,attr,omitempty"`
 }
 
 type FindFile struct {
@@ -246,7 +246,7 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *FindRe
 		}
 		cond := FindCondition{Type: p.kind, Value: value}
 		if p.negate {
-			cond.Negated = "true"
+			cond.Negated = true
 		}
 		result.Conditions = append(result.Conditions, cond)
 	}

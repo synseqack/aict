@@ -153,7 +153,6 @@ func TestTr_Empty(t *testing.T) {
 	}
 }
 
-
 func createFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := dir + "/" + name

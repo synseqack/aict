@@ -20,11 +20,11 @@ func init() {
 	tool.Register("sed", Run)
 	tool.RegisterMeta("sed", tool.GenerateSchema("sed", "Apply sed-style transformations to file contents (s, d, p, q commands)", Config{}))
 	xmlout.RegisterDict("sed", map[string]string{
-		"s": "script",
+		"s":  "script",
 		"lr": "lines_read",
 		"lo": "lines_output",
 		"su": "substitutions",
-		"n": "number",
+		"n":  "number",
 		"ct": "content",
 		"ch": "changed",
 	})
@@ -53,20 +53,20 @@ type SedResult struct {
 func (*SedResult) isSedResult() {}
 
 type SedFile struct {
-	XMLName      xml.Name  `xml:"file" json:"-"`
-	Path         string    `xml:"path,attr" json:"p"`
-	Absolute     string    `xml:"absolute,attr" json:"a"`
-	LinesRead    int       `xml:"lines_read,attr" json:"lr"`
-	LinesOutput  int       `xml:"lines_output,attr" json:"lo"`
-	Substitutions int      `xml:"substitutions,attr" json:"su"`
-	Lines        []SedLine `xml:"line,omitempty" json:"lines,omitempty"`
+	XMLName       xml.Name  `xml:"file" json:"-"`
+	Path          string    `xml:"path,attr" json:"p"`
+	Absolute      string    `xml:"absolute,attr" json:"a"`
+	LinesRead     int       `xml:"lines_read,attr" json:"lr"`
+	LinesOutput   int       `xml:"lines_output,attr" json:"lo"`
+	Substitutions int       `xml:"substitutions,attr" json:"su"`
+	Lines         []SedLine `xml:"line,omitempty" json:"lines,omitempty"`
 }
 
 type SedLine struct {
-	XMLName xml.Name `xml:"line" json:"-"`
-	Number  int      `xml:"number,attr" json:"n"`
-	Content string   `xml:"content,attr" json:"ct"`
-	Changed bool     `xml:"changed,attr,omitempty" json:"ch,omitempty"`
+	XMLName xml.Name    `xml:"line" json:"-"`
+	Number  int         `xml:"number,attr" json:"n"`
+	Content string      `xml:"content,attr" json:"ct"`
+	Changed xmlout.Bool `xml:"changed,attr,omitempty" json:"ch,omitempty"`
 }
 
 type SedError struct {
@@ -444,7 +444,7 @@ func processFile(r io.Reader, given, absolute string, cmds []command, cfg Config
 			sf.Lines = append(sf.Lines, SedLine{
 				Number:  lineNum,
 				Content: outLine,
-				Changed: changed,
+				Changed: xmlout.Bool(changed),
 			})
 			sf.LinesOutput++
 			if changed {

@@ -17,7 +17,7 @@ func init() {
 	tool.Register("completions", Run)
 	tool.RegisterMeta("completions", tool.GenerateSchema("completions", "Generate shell completion scripts for aict", Config{}))
 	xmlout.RegisterDict("completions", map[string]string{
-		"s": "shell",
+		"s":  "shell",
 		"sc": "script",
 	})
 }
@@ -33,10 +33,10 @@ type Config struct {
 }
 
 type CompletionsResult struct {
-	XMLName   xml.Name `xml:"completions" json:"-"`
-	Shell     string   `xml:"shell,attr" json:"s"`
-	Script    string   `xml:"script,omitempty" json:"sc,omitempty"`
-	Timestamp int64    `xml:"timestamp,attr" json:"t"`
+	XMLName   xml.Name           `xml:"completions" json:"-"`
+	Shell     string             `xml:"shell,attr" json:"s"`
+	Script    string             `xml:"script,omitempty" json:"sc,omitempty"`
+	Timestamp int64              `xml:"timestamp,attr" json:"t"`
 	Errors    []CompletionsError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 

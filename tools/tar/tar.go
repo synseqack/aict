@@ -25,7 +25,7 @@ func init() {
 		"ab": "absolute",
 		"sb": "size_bytes",
 		"sh": "size_human",
-		"m": "modified",
+		"m":  "modified",
 		"lt": "link_target",
 	})
 }
@@ -55,14 +55,14 @@ type TarResult struct {
 func (*TarResult) isTarResult() {}
 
 type TarFile struct {
-	XMLName   xml.Name `xml:"file" json:"-"`
-	Path      string   `xml:"path,attr" json:"p"`
-	SizeBytes int64    `xml:"size_bytes,attr" json:"sb"`
-	SizeHuman string   `xml:"size_human,attr" json:"sh"`
-	Modified  string   `xml:"modified,attr" json:"m"`
-	Type      string   `xml:"type,attr" json:"tp"`
-	Mode      string   `xml:"mode,attr" json:"mo"`
-	LinkTarget string  `xml:"link_target,attr,omitempty" json:"lt,omitempty"`
+	XMLName    xml.Name `xml:"file" json:"-"`
+	Path       string   `xml:"path,attr" json:"p"`
+	SizeBytes  int64    `xml:"size_bytes,attr" json:"sb"`
+	SizeHuman  string   `xml:"size_human,attr" json:"sh"`
+	Modified   string   `xml:"modified,attr" json:"m"`
+	Type       string   `xml:"type,attr" json:"tp"`
+	Mode       string   `xml:"mode,attr" json:"mo"`
+	LinkTarget string   `xml:"link_target,attr,omitempty" json:"lt,omitempty"`
 }
 
 type TarError struct {

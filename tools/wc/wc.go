@@ -22,37 +22,37 @@ func init() {
 	tool.RegisterMeta("wc", tool.GenerateSchema("wc", "Count lines, words, and bytes in files", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"ln": "lines",
-		"wd": "words",
-		"by": "bytes",
-		"ml": "max_line_len",
-		"lang":"language",
-		"f":  "file",
-		"tl": "total_lines",
-		"tw": "total_words",
-		"tb": "total_bytes",
-		"t":  "timestamp",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"ln":   "lines",
+		"wd":   "words",
+		"by":   "bytes",
+		"ml":   "max_line_len",
+		"lang": "language",
+		"f":    "file",
+		"tl":   "total_lines",
+		"tw":   "total_words",
+		"tb":   "total_bytes",
+		"t":    "timestamp",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("wc", dict)
 }
 
 type Config struct {
-	Lines    bool `flag:"" desc:"Count lines"`
-	Words    bool `flag:"" desc:"Count words"`
-	Bytes    bool `flag:"" desc:"Count bytes"`
-	MaxLines bool `flag:"" desc:"Show maximum line length"`
-	AllFiles bool `flag:"" desc:"Count all files including hidden"`
-	XML      bool
-	JSON     bool
-	Plain    bool
-	Pretty   bool
+	Lines     bool `flag:"" desc:"Count lines"`
+	Words     bool `flag:"" desc:"Count words"`
+	Bytes     bool `flag:"" desc:"Count bytes"`
+	MaxLines  bool `flag:"" desc:"Show maximum line length"`
+	AllFiles  bool `flag:"" desc:"Count all files including hidden"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict     bool
+	Dict      bool
 }
 
 type WCResult struct {

@@ -7,9 +7,7 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
-	"time"
 )
 
 func IsXMLMode() bool {
@@ -18,6 +16,8 @@ func IsXMLMode() bool {
 
 // WriteXML writes XML with short attribute names (compact by default)
 func WriteXML(w io.Writer, v interface{}, pretty bool) error {
+	compactBools = os.Getenv("AICT_NOCOMPACT") != "1"
+
 	data, err := xml.Marshal(v)
 	if err != nil {
 		return err
@@ -31,6 +31,8 @@ func WriteXML(w io.Writer, v interface{}, pretty bool) error {
 
 // WriteXMLNoCompact writes XML with long attribute names (verbose, for backward compatibility)
 func WriteXMLNoCompact(w io.Writer, v interface{}, pretty bool) error {
+	compactBools = false
+
 	if pretty {
 		data, err := xml.MarshalIndent(v, "", "  ")
 		if err != nil {
@@ -43,58 +45,13 @@ func WriteXMLNoCompact(w io.Writer, v interface{}, pretty bool) error {
 	return enc.Encode(v)
 }
 
-func WriteXMLStream(w io.Writer, elementName string, items []string) error {
-	enc := xml.NewEncoder(w)
-
-	ts := strconv.FormatInt(time.Now().Unix(), 10)
-	_, err := fmt.Fprintf(w, "<%s timestamp=\"%s\">", elementName, ts)
-	if err != nil {
-		return err
-	}
-
-	for _, item := range items {
-		err = enc.EncodeToken(xml.CharData(item))
-		if err != nil {
-			return err
-		}
-	}
-
-	err = enc.EncodeToken(xml.CharData([]byte("\n")))
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(w, "</%s>", elementName)
-	return err
-}
-
-// WriteJSON writes JSON with short keys (always compact)
+// WriteJSON writes JSON with short keys (struct tags supply them)
 func WriteJSON(w io.Writer, v interface{}) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
-
-	toolName := detectToolName(v)
-	compact := compactJSONKeys(string(data), v, toolName)
-	_, err = w.Write([]byte(compact))
-	if err != nil {
-		return err
-	}
-	_, err = w.Write([]byte("\n"))
-	return err
-}
-
-// WriteJSONCompact writes compact JSON without pretty printing
-func WriteJSONCompact(w io.Writer, v interface{}) error {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	toolName := detectToolName(v)
-	compact := compactJSONKeys(string(data), v, toolName)
-	_, err = w.Write([]byte(compact))
+	_, err = w.Write([]byte(data))
 	if err != nil {
 		return err
 	}

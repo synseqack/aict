@@ -72,7 +72,7 @@ type ChecksumError struct {
 	Path    string   `xml:"path,attr" json:"p"`
 }
 
-func Run(args []string) error      { return runWithAlgos(args, []string{"md5", "sha1", "sha256"}) }
+func Run(args []string) error       { return runWithAlgos(args, []string{"md5", "sha1", "sha256"}) }
 func RunMD5(args []string) error    { return runWithAlgos(args, []string{"md5"}) }
 func RunSHA256(args []string) error { return runWithAlgos(args, []string{"sha256"}) }
 func RunSHA1(args []string) error   { return runWithAlgos(args, []string{"sha1"}) }

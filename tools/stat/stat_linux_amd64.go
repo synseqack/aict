@@ -40,9 +40,9 @@ type statxT struct {
 // getBirthSec returns the birth time (btime) using statx(2).
 // Returns 0 if the filesystem doesn't support birth time.
 func getBirthSec(path string) int64 {
-	const sysStatx = 332        // __NR_statx on x86_64
-	const statxBtime = 0x800    // STATX_BTIME
-	atFdcwd := -100             // AT_FDCWD — must be a variable, not constant, for uintptr cast
+	const sysStatx = 332     // __NR_statx on x86_64
+	const statxBtime = 0x800 // STATX_BTIME
+	atFdcwd := -100          // AT_FDCWD — must be a variable, not constant, for uintptr cast
 
 	pathBytes, err := syscall.BytePtrFromString(path)
 	if err != nil {

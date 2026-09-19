@@ -20,9 +20,9 @@ func init() {
 	tool.RegisterMeta("jq", tool.GenerateSchema("jq", "Extract values from JSON files using path expressions", Config{}))
 	xmlout.RegisterDict("jq", map[string]string{
 		"pa": "path",
-		"i": "index",
+		"i":  "index",
 		"tp": "type",
-		"r": "raw",
+		"r":  "raw",
 	})
 }
 
@@ -38,12 +38,12 @@ type Config struct {
 }
 
 type JQResult struct {
-	XMLName  xml.Name   `xml:"jq" json:"-"`
-	Path     string     `xml:"path,attr" json:"pa"`
-	Count    int        `xml:"count,attr" json:"c"`
+	XMLName   xml.Name  `xml:"jq" json:"-"`
+	Path      string    `xml:"path,attr" json:"pa"`
+	Count     int       `xml:"count,attr" json:"c"`
 	Timestamp int64     `xml:"timestamp,attr" json:"t"`
-	Values   []JQValue  `xml:"value,omitempty" json:"values,omitempty"`
-	Errors   []JQError  `xml:"error,omitempty" json:"errors,omitempty"`
+	Values    []JQValue `xml:"value,omitempty" json:"values,omitempty"`
+	Errors    []JQError `xml:"error,omitempty" json:"errors,omitempty"`
 }
 
 func (*JQResult) isJQResult() {}

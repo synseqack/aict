@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -15,7 +16,9 @@ func MIME(path string) string {
 
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)
-	if err != nil || n == 0 {
+	if err != nil && err != io.EOF && n == 0 {
+		// A file we could not read from at all is opaque. An empty file is
+		// text: http.DetectContentType returns text/plain for zero bytes.
 		return "application/octet-stream"
 	}
 
@@ -119,7 +122,8 @@ func DetectFromFile(path string) (mime string, isBinary bool, err error) {
 	buf := make([]byte, 512)
 	n, readErr := f.Read(buf)
 	if readErr != nil && n == 0 {
-		return "application/octet-stream", true, nil
+		m := MIME(path)
+		return m, IsBinary(m), nil
 	}
 
 	mime = http.DetectContentType(buf[:n])

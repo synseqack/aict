@@ -26,26 +26,26 @@ func init() {
 	tool.RegisterMeta("grep", tool.GenerateSchema("grep", "Search for patterns in files with line numbers and context", Config{}))
 
 	dict := map[string]string{
-		"p":  "pattern",
-		"fl": "flags",
-		"r":  "recursive",
-		"cs": "case_sensitive",
-		"mt": "match_type",
-		"sf": "searched_files",
-		"mf": "matched_files",
-		"n":  "total_matches",
-		"sr": "search_root",
-		"t":  "timestamp",
-		"m":  "match",
-		"f":  "file",
-		"ln": "line_num",
-		"txt":"text",
-		"ob": "offset_bytes",
-		"lang":"language",
-		"mif":"matches_in_file",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "pattern",
+		"fl":   "flags",
+		"r":    "recursive",
+		"cs":   "case_sensitive",
+		"mt":   "match_type",
+		"sf":   "searched_files",
+		"mf":   "matched_files",
+		"n":    "total_matches",
+		"sr":   "search_root",
+		"t":    "timestamp",
+		"m":    "match",
+		"f":    "file",
+		"ln":   "line_num",
+		"txt":  "text",
+		"ob":   "offset_bytes",
+		"lang": "language",
+		"mif":  "matches_in_file",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("grep", dict)
 }
@@ -80,8 +80,8 @@ type GrepResult struct {
 	XMLName       xml.Name        `xml:"grep" json:"-"`
 	Pattern       string          `xml:"pattern,attr" json:"p"`
 	Flags         string          `xml:"flags,attr" json:"fl"`
-	Recursive     string          `xml:"recursive,attr" json:"r"`
-	CaseSensitive string          `xml:"case_sensitive,attr" json:"cs"`
+	Recursive     xmlout.Bool     `xml:"recursive,attr" json:"r"`
+	CaseSensitive xmlout.Bool     `xml:"case_sensitive,attr" json:"cs"`
 	MatchType     string          `xml:"match_type,attr" json:"mt"`
 	SearchedFiles int             `xml:"searched_files,attr" json:"sf"`
 	MatchedFiles  int             `xml:"matched_files,attr" json:"mf"`
@@ -268,8 +268,8 @@ func parseFlags(args []string) (Config, string) {
 func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *GrepResult {
 	result := &GrepResult{
 		Pattern:       cfg.Pattern,
-		Recursive:     strconv.FormatBool(cfg.Recursive),
-		CaseSensitive: strconv.FormatBool(!cfg.CaseInsensitive),
+		Recursive:     xmlout.Bool(cfg.Recursive),
+		CaseSensitive: xmlout.Bool(!cfg.CaseInsensitive),
 		SearchRoot:    givenPath,
 		Timestamp:     meta.Now(),
 	}
@@ -323,8 +323,8 @@ func searchPath(absPath, givenPath string, info os.FileInfo, cfg Config) *GrepRe
 func searchDirectory(dirPath, givenPath string, cfg Config) *GrepResult {
 	result := &GrepResult{
 		Pattern:       cfg.Pattern,
-		Recursive:     "true",
-		CaseSensitive: strconv.FormatBool(!cfg.CaseInsensitive),
+		Recursive:     true,
+		CaseSensitive: xmlout.Bool(!cfg.CaseInsensitive),
 		SearchRoot:    givenPath,
 		Timestamp:     meta.Now(),
 	}

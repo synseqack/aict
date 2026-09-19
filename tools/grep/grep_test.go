@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -216,5 +217,41 @@ func TestGrep_EmptyFile(t *testing.T) {
 
 	if result.MatchedFiles != 0 {
 		t.Errorf("expected 0 matched files, got %d", result.MatchedFiles)
+	}
+}
+
+func TestGrep_CompactPreservesBooleanValuedPattern(t *testing.T) {
+	prev := os.Getenv("AICT_NOCOMPACT")
+	os.Unsetenv("AICT_NOCOMPACT")
+	defer os.Setenv("AICT_NOCOMPACT", prev)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	if err := os.WriteFile(path, []byte("true\nfalse\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run([]string{"true", path})
+	w.Close()
+	os.Stdout = oldStdout
+
+	var outBuf bytes.Buffer
+	outBuf.ReadFrom(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := outBuf.String()
+	// The searched-for pattern and the matched line text are VALUES: they must
+	// not compact to 1 even though they read "true".
+	if !strings.Contains(out, `p="true"`) {
+		t.Errorf("pattern 'true' was corrupted in compact mode: %s", out)
+	}
+	if !strings.Contains(out, `txt="true"`) {
+		t.Errorf("match text 'true' was corrupted in compact mode: %s", out)
 	}
 }

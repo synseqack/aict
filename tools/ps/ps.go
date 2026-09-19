@@ -21,40 +21,40 @@ func init() {
 	tool.RegisterMeta("ps", tool.GenerateSchema("ps", "List running processes with details", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"p":  "process",
-		"pid":"pid",
-		"ppid":"ppid",
-		"usr":"user",
-		"uid":"uid",
-		"st": "state",
-		"sd": "state_desc",
-		"cpu":"cpu_pct",
-		"mem":"mem_pct",
-		"vsz":"vsz_kb",
-		"rss":"rss_kb",
-		"start":"started",
-		"cmd":"command",
-		"args":"args",
-		"ep": "exe",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":     "timestamp",
+		"p":     "process",
+		"pid":   "pid",
+		"ppid":  "ppid",
+		"usr":   "user",
+		"uid":   "uid",
+		"st":    "state",
+		"sd":    "state_desc",
+		"cpu":   "cpu_pct",
+		"mem":   "mem_pct",
+		"vsz":   "vsz_kb",
+		"rss":   "rss_kb",
+		"start": "started",
+		"cmd":   "command",
+		"args":  "args",
+		"ep":    "exe",
+		"e":     "error",
+		"c":     "code",
+		"msg":   "msg",
 	}
 	xmlout.RegisterDict("ps", dict)
 }
 
 type Config struct {
-	All    bool   `flag:"" desc:"Show all processes"`
-	Full   bool   `flag:"" desc:"Show full command details"`
-	PID    string `flag:"" desc:"Filter by PID"`
-	SortBy string `flag:"" desc:"Sort by field (e.g., pid, cpu, mem)"`
-	XML    bool
-	JSON   bool
-	Plain  bool
-	Pretty bool
+	All       bool   `flag:"" desc:"Show all processes"`
+	Full      bool   `flag:"" desc:"Show full command details"`
+	PID       string `flag:"" desc:"Filter by PID"`
+	SortBy    string `flag:"" desc:"Sort by field (e.g., pid, cpu, mem)"`
+	XML       bool
+	JSON      bool
+	Plain     bool
+	Pretty    bool
 	NoCompact bool
-	Dict   bool
+	Dict      bool
 }
 
 type PsResult struct {

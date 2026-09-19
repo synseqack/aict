@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/synseqack/aict/internal/detect"
@@ -22,21 +21,21 @@ func init() {
 	tool.RegisterMeta("cat", tool.GenerateSchema("cat", "Read and output file contents with metadata", Config{}))
 
 	dict := map[string]string{
-		"p":  "path",
-		"a":  "absolute",
-		"s":  "size_bytes",
-		"ln": "lines",
-		"enc":"encoding",
-		"lang":"language",
-		"bin":"binary",
-		"mime":"mime",
-		"m":  "modified",
-		"ma": "modified_ago_s",
-		"ct": "content",
-		"f":  "file",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"p":    "path",
+		"a":    "absolute",
+		"s":    "size_bytes",
+		"ln":   "lines",
+		"enc":  "encoding",
+		"lang": "language",
+		"bin":  "binary",
+		"mime": "mime",
+		"m":    "modified",
+		"ma":   "modified_ago_s",
+		"ct":   "content",
+		"f":    "file",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("cat", dict)
 }
@@ -47,7 +46,7 @@ type Config struct {
 	JSON        bool
 	Plain       bool
 	Pretty      bool
-	NoCompact  bool
+	NoCompact   bool
 	Dict        bool
 }
 
@@ -59,7 +58,7 @@ type CatResult struct {
 	Lines        int         `xml:"lines,attr" json:"ln"`
 	Encoding     string      `xml:"encoding,attr" json:"enc"`
 	Language     string      `xml:"language,attr" json:"lang"`
-	Binary       string      `xml:"binary,attr" json:"bin"`
+	Binary       xmlout.Bool `xml:"binary,attr" json:"bin"`
 	MIME         string      `xml:"mime,attr" json:"mime"`
 	Modified     int64       `xml:"modified,attr" json:"m"`
 	ModifiedAgoS int64       `xml:"modified_ago_s,attr" json:"ma"`
@@ -145,7 +144,7 @@ func catFile(path string, cfg Config) (*CatResult, error) {
 		return &CatResult{
 			Path:     path,
 			Errors:   []CatError{{Code: 1, Msg: err.Error(), Path: path}},
-			Binary:   "false",
+			Binary:   false,
 			Encoding: "binary",
 		}, nil
 	}
@@ -160,7 +159,7 @@ func catFile(path string, cfg Config) (*CatResult, error) {
 			Path:     resolved.Given,
 			Absolute: resolved.Absolute,
 			Errors:   []CatError{{Code: code, Msg: "no such file or directory", Path: resolved.Absolute}},
-			Binary:   "false",
+			Binary:   false,
 			Encoding: "binary",
 		}, nil
 	}
@@ -170,7 +169,7 @@ func catFile(path string, cfg Config) (*CatResult, error) {
 			Path:     resolved.Given,
 			Absolute: resolved.Absolute,
 			Errors:   []CatError{{Code: 1, Msg: "is a directory", Path: resolved.Absolute}},
-			Binary:   "false",
+			Binary:   false,
 			Encoding: "binary",
 		}, nil
 	}
@@ -189,7 +188,7 @@ func catFile(path string, cfg Config) (*CatResult, error) {
 		ModifiedAgoS: meta.AgoSeconds(info.ModTime().Unix()),
 		MIME:         mime,
 		Language:     language,
-		Binary:       strconv.FormatBool(isBinary),
+		Binary:       xmlout.Bool(isBinary),
 		Encoding:     "utf-8",
 	}
 
@@ -383,4 +382,3 @@ func writePlain(w io.Writer, result *CatResult) error {
 
 	return nil
 }
-

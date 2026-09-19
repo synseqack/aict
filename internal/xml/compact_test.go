@@ -14,7 +14,7 @@ type testResult struct {
 	Path         string      `xml:"path,attr" json:"p"`
 	Absolute     string      `xml:"absolute,attr" json:"a"`
 	TotalEntries int         `xml:"total_entries,attr" json:"n"`
-	Hidden       bool        `xml:"hidden,attr" json:"h"`
+	Hidden       Bool        `xml:"hidden,attr" json:"h"`
 	Timestamp    int64       `xml:"timestamp,attr" json:"t"`
 	Entries      []testEntry `xml:"entry,omitempty" json:"entries,omitempty"`
 }
@@ -25,7 +25,7 @@ type testEntry struct {
 	SizeBytes int64    `xml:"size_bytes,attr" json:"s"`
 	SizeHuman string   `xml:"size_human,attr" json:"sh"`
 	Language  string   `xml:"language,attr" json:"lang"`
-	Binary    bool     `xml:"binary,attr" json:"bin"`
+	Binary    Bool     `xml:"binary,attr" json:"bin"`
 }
 
 func init() {
@@ -48,12 +48,13 @@ func TestCompactXML_ReplacesAttributes(t *testing.T) {
 	result := &testResult{
 		Path:         ".",
 		Absolute:     "/home/user/project",
-		TotalEntries: 2,
+		TotalEntries: 3,
 		Hidden:       false,
 		Timestamp:    1700000000,
 		Entries: []testEntry{
 			{Name: "main.go", SizeBytes: 1024, SizeHuman: "1K", Language: "go", Binary: false},
 			{Name: "image.png", SizeBytes: 5120, SizeHuman: "5K", Language: "", Binary: true},
+			{Name: "true", SizeBytes: 1, SizeHuman: "1B", Language: "text", Binary: false},
 		},
 	}
 
@@ -72,7 +73,7 @@ func TestCompactXML_ReplacesAttributes(t *testing.T) {
 	if !strings.Contains(output, `a="/home/user/project"`) {
 		t.Errorf("expected short attr 'a', got: %s", output)
 	}
-	if !strings.Contains(output, `n="2"`) {
+	if !strings.Contains(output, `n="3"`) {
 		t.Errorf("expected short attr 'n', got: %s", output)
 	}
 
@@ -87,12 +88,15 @@ func TestCompactXML_ReplacesAttributes(t *testing.T) {
 		t.Errorf("should not contain long attr 'total_entries', got: %s", output)
 	}
 
-	// Booleans should be 1/0
-	if strings.Contains(output, `="true"`) || strings.Contains(output, `="false"`) {
-		t.Errorf("booleans should be 1/0, got: %s", output)
-	}
+	// Booleans should be 1/0 on the boolean attribute, while arbitrary string
+	// values that read "true"/"false" must survive untouched.
 	if !strings.Contains(output, `h="0"`) {
-		t.Errorf("expected h='0' for false, got: %s", output)
+		t.Errorf("expected h='0' for hidden=false, got: %s", output)
+	}
+
+	// A filename reading "true" is a VALUE, not a boolean: it must survive.
+	if !strings.Contains(output, `nm="true"`) {
+		t.Errorf("value 'true' must survive compaction, got: %s", output)
 	}
 }
 
@@ -276,9 +280,9 @@ func TestWriteJSON_CompactKeys(t *testing.T) {
 		t.Errorf("expected short key 'a', got: %s", output)
 	}
 
-	// Booleans should be 1/0
-	if strings.Contains(output, `:true`) || strings.Contains(output, `:false`) {
-		t.Errorf("booleans should be 1/0 in JSON, got: %s", output)
+	// Booleans are native in JSON regardless of mode.
+	if !strings.Contains(output, `"h": false`) {
+		t.Errorf("expected native false for hidden, got: %s", output)
 	}
 }
 

@@ -191,10 +191,10 @@ func TestFind_NotBindsToNextPredicateOnly(t *testing.T) {
 	// The negation must be visible in the echoed conditions.
 	foundNegated := false
 	for _, c := range result.Conditions {
-		if c.Type == "name" && c.Value == "a.go" && c.Negated == "true" {
+		if c.Type == "name" && c.Value == "a.go" && bool(c.Negated) {
 			foundNegated = true
 		}
-		if c.Type == "name" && c.Value == "*.go" && c.Negated == "true" {
+		if c.Type == "name" && c.Value == "*.go" && bool(c.Negated) {
 			t.Errorf("-not leaked onto the second -name predicate")
 		}
 	}

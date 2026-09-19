@@ -20,15 +20,15 @@ func init() {
 	tool.RegisterMeta("sort", tool.GenerateSchema("sort", "Sort lines of text files", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"lin":"lines_in",
-		"lout":"lines_out",
-		"k":  "key",
-		"ord":"order",
-		"ct": "content",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":    "timestamp",
+		"lin":  "lines_in",
+		"lout": "lines_out",
+		"k":    "key",
+		"ord":  "order",
+		"ct":   "content",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("sort", dict)
 }
@@ -44,7 +44,7 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	NoCompact bool
+	NoCompact  bool
 	Dict       bool
 }
 

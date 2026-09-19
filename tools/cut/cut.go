@@ -19,14 +19,14 @@ func init() {
 	tool.RegisterMeta("cut", tool.GenerateSchema("cut", "Cut out sections of each line from files", Config{}))
 
 	dict := map[string]string{
-		"t":  "timestamp",
-		"del":"delimiter",
-		"flds":"fields",
-		"lp": "lines_processed",
-		"ct": "content",
-		"e":  "error",
-		"c":  "code",
-		"msg":"msg",
+		"t":    "timestamp",
+		"del":  "delimiter",
+		"flds": "fields",
+		"lp":   "lines_processed",
+		"ct":   "content",
+		"e":    "error",
+		"c":    "code",
+		"msg":  "msg",
 	}
 	xmlout.RegisterDict("cut", dict)
 }
@@ -40,7 +40,7 @@ type Config struct {
 	JSON       bool
 	Plain      bool
 	Pretty     bool
-	NoCompact bool
+	NoCompact  bool
 	Dict       bool
 }
 

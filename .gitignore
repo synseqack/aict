@@ -40,4 +40,8 @@ benchmarks/token-samples/
 docs-site/book/
 docs-site/src/tools-reference.md
 
+# Agent scratch: plans, specs, and session notes are kept out of the repo
+.superpowers/
+docs/superpowers/
+
 ROADMAP.md
